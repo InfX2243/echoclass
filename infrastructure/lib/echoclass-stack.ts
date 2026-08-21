@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import { aws_dynamodb as dynamodb, aws_s3 as s3 } from 'aws-cdk-lib';
+import { aws_cloudfront as cloudfront, aws_dynamodb as dynamodb, aws_s3 as s3 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 
 export interface EchoClassStackProps extends cdk.StackProps {
@@ -61,6 +61,71 @@ export class EchoClassStack extends cdk.Stack {
       ],
     });
 
+    const mediaOriginAccessControl = new cloudfront.CfnOriginAccessControl(this, 'MediaOriginAccessControl', {
+      originAccessControlConfig: {
+        name: `EchoClass-${environmentName}-MediaOAC`,
+        description: 'CloudFront access to the private EchoClass media bucket',
+        originAccessControlOriginType: 's3',
+        signingBehavior: 'always',
+        signingProtocol: 'sigv4',
+      },
+    });
+
+    const mediaDistribution = new cloudfront.CfnDistribution(this, 'MediaDistribution', {
+      distributionConfig: {
+        enabled: true,
+        comment: `EchoClass ${environmentName} private media delivery`,
+        defaultRootObject: '',
+        priceClass: 'PriceClass_100',
+        origins: [
+          {
+            id: 'MediaBucketOrigin',
+            domainName: mediaBucket.bucketRegionalDomainName,
+            originAccessControlId: mediaOriginAccessControl.ref,
+            s3OriginConfig: {
+              originAccessIdentity: '',
+            },
+          },
+        ],
+        defaultCacheBehavior: {
+          targetOriginId: 'MediaBucketOrigin',
+          viewerProtocolPolicy: 'redirect-to-https',
+          allowedMethods: ['GET', 'HEAD'],
+          cachedMethods: ['GET', 'HEAD'],
+          compress: true,
+          forwardedValues: {
+            queryString: true,
+            cookies: { forward: 'none' },
+          },
+        },
+        restrictions: {
+          geoRestriction: { restrictionType: 'none' },
+        },
+        viewerCertificate: {
+          cloudFrontDefaultCertificate: true,
+        },
+      },
+    });
+
+    mediaDistribution.addPropertyOverride(
+      'DistributionConfig.Origins.0.S3OriginConfig.OriginAccessIdentity',
+      '',
+    );
+
+    mediaBucket.addToResourcePolicy(
+      new cdk.aws_iam.PolicyStatement({
+        effect: cdk.aws_iam.Effect.ALLOW,
+        principals: [new cdk.aws_iam.ServicePrincipal('cloudfront.amazonaws.com')],
+        actions: ['s3:GetObject'],
+        resources: [mediaBucket.arnForObjects('*')],
+        conditions: {
+          StringEquals: {
+            'AWS:SourceArn': `arn:${cdk.Aws.PARTITION}:cloudfront::${cdk.Aws.ACCOUNT_ID}:distribution/${mediaDistribution.ref}`,
+          },
+        },
+      }),
+    );
+
     new cdk.CfnOutput(this, 'ApplicationTableName', {
       value: applicationTable.tableName,
       description: 'EchoClass application DynamoDB table name',
@@ -71,6 +136,18 @@ export class EchoClassStack extends cdk.Stack {
       value: mediaBucket.bucketName,
       description: 'EchoClass private media bucket name',
       exportName: `${environmentName}-EchoClass-MediaBucketName`,
+    });
+
+    new cdk.CfnOutput(this, 'MediaDistributionId', {
+      value: mediaDistribution.ref,
+      description: 'CloudFront distribution ID for private EchoClass media',
+      exportName: `${environmentName}-EchoClass-MediaDistributionId`,
+    });
+
+    new cdk.CfnOutput(this, 'MediaDistributionDomainName', {
+      value: mediaDistribution.attrDomainName,
+      description: 'CloudFront distribution domain for private EchoClass media',
+      exportName: `${environmentName}-EchoClass-MediaDistributionDomainName`,
     });
 
     new cdk.CfnOutput(this, 'EnvironmentName', {
