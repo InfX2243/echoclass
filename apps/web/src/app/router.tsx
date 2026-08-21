@@ -12,21 +12,27 @@ import { TeacherClassPage } from './pages/TeacherClassPage';
 import { TeacherDashboardPage } from './pages/TeacherDashboardPage';
 import { TeacherLessonsPage } from './pages/TeacherLessonsPage';
 import { PlaceholderPage } from './PlaceholderPage';
+import { ProtectedRoute } from './auth/ProtectedRoute';
 
 export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
   { path: '/login', element: <AuthPage mode="login" /> },
   { path: '/register', element: <AuthPage mode="register" /> },
-  { path: '/dashboard', element: <DashboardPage /> },
-  { path: '/teacher/dashboard', element: <TeacherDashboardPage /> },
-  { path: '/teacher/classes/:classId', element: <TeacherClassPage /> },
-  { path: '/teacher/classes/:classId/lessons', element: <TeacherLessonsPage /> },
-  { path: '/classes', element: <ClassesPage /> },
-  { path: '/classes/:classId', element: <ClassDetailPage /> },
-  { path: '/lessons/:lessonId', element: <LessonPage /> },
-  { path: '/echoes', element: <EchoesPage /> },
-  { path: '/revisits', element: <RevisitsPage /> },
-  { path: '/settings', element: <SettingsPage /> },
-  { path: '/profile', element: <PlaceholderPage title="Profile" /> },
+  {
+    element: <ProtectedRoute />,
+    children: [
+      { path: '/dashboard', element: <DashboardPage /> },
+      { path: '/teacher/dashboard', element: <TeacherDashboardPage /> },
+      { path: '/teacher/classes/:classId', element: <TeacherClassPage /> },
+      { path: '/teacher/classes/:classId/lessons', element: <TeacherLessonsPage /> },
+      { path: '/classes', element: <ClassesPage /> },
+      { path: '/classes/:classId', element: <ClassDetailPage /> },
+      { path: '/lessons/:lessonId', element: <LessonPage /> },
+      { path: '/echoes', element: <EchoesPage /> },
+      { path: '/revisits', element: <RevisitsPage /> },
+      { path: '/settings', element: <SettingsPage /> },
+      { path: '/profile', element: <PlaceholderPage title="Profile" /> },
+    ],
+  },
   { path: '*', element: <PlaceholderPage title="Page Not Found" /> },
 ]);
