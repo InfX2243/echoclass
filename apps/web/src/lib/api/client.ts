@@ -1,45 +1,22 @@
-import { fetchAuthSession } from 'aws-amplify/auth';
-
+import { cognitoAuth } from '@/lib/auth/cognito';
 import { buildApiUrl } from './config';
 import { createApiError } from './errors';
 
-export type RequestOptions = Omit<RequestInit, 'body' | 'headers'> & {
-  body?: unknown;
-  headers?: HeadersInit;
-};
+export type RequestOptions = Omit<RequestInit, 'body' | 'headers'> & { body?: unknown; headers?: HeadersInit };
 
 async function parseResponse(response: Response) {
   const contentType = response.headers.get('content-type') ?? '';
   if (response.status === 204) return undefined;
-  if (contentType.includes('application/json')) {
-    try { return await response.json(); } catch { return undefined; }
-  }
+  if (contentType.includes('application/json')) { try { return await response.json(); } catch { return undefined; } }
   return response.text();
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { body, headers, ...init } = options;
-  let accessToken: string | null = null;
-  try { accessToken = (await fetchAuthSession()).tokens?.accessToken?.toString() ?? null; } catch { /* unauthenticated request */ }
-
-  const response = await fetch(buildApiUrl(path), {
-    ...init,
-    credentials: 'include',
-    headers: {
-      Accept: 'application/json',
-      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...headers,
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-
+  const accessToken = cognitoAuth.getAccessToken();
+  const response = await fetch(buildApiUrl(path), { ...init, credentials: 'include', headers: { Accept: 'application/json', ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}), ...headers }, body: body === undefined ? undefined : JSON.stringify(body) });
   const payload = await parseResponse(response);
-  if (!response.ok) {
-    const message = typeof payload === 'object' && payload !== null && 'message' in payload
-      ? String(payload.message) : `API request failed with status ${response.status}`;
-    throw createApiError(response.status, message, payload);
-  }
+  if (!response.ok) { const message = typeof payload === 'object' && payload !== null && 'message' in payload ? String(payload.message) : `API request failed with status ${response.status}`; throw createApiError(response.status, message, payload); }
   return payload as T;
 }
 
