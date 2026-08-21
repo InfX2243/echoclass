@@ -1,6 +1,6 @@
 import { Check, Monitor, Moon, Sun } from 'lucide-react';
 import { AppShell } from '../components/AppShell';
-import { useTheme } from '../theme/ThemeProvider';
+import { useTheme } from '../theme/useTheme';
 import type { Theme } from '../theme/theme.types';
 
 const options = [
