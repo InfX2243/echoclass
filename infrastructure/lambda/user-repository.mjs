@@ -4,20 +4,25 @@ import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dyn
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const now = () => new Date().toISOString();
 
+const normalizeRole = (value) => value === 'STUDENT' || value === 'TEACHER' ? value : undefined;
+
 export const getOrCreateUser = async ({ subject, username, claims }) => {
   const tableName = process.env.TABLE_NAME;
-  const key = { PK: `USER#${subject}`, SK: 'PROFILE' };
+  if (!tableName) throw new Error('TABLE_NAME is not configured');
 
+  const key = { PK: `USER#${subject}`, SK: 'PROFILE' };
   const existing = await client.send(new GetCommand({ TableName: tableName, Key: key }));
   if (existing.Item) return existing.Item;
 
   const createdAt = now();
+  const role = normalizeRole(claims?.['custom:role']);
   const user = {
     ...key,
     entityType: 'USER',
     userId: subject,
     username: username ?? claims?.username ?? subject,
     email: claims?.email,
+    ...(role ? { role } : {}),
     createdAt,
     updatedAt: createdAt,
   };
