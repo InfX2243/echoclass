@@ -18,7 +18,10 @@ export function LessonPage() {
   const [params, setParams] = useSearchParams();
   const [selectedType, setSelectedType] = useState<EchoType | null>(null);
   const selectedTime = Number(params.get('t') ?? 188);
-  const selected = useMemo(() => echoes.reduce((a, b) => Math.abs(b.time - selectedTime) < Math.abs(a.time - selectedTime) ? b : a), echoes[0]), [selectedTime]);
+  const selected = useMemo(
+    () => echoes.reduce((a, b) => Math.abs(b.time - selectedTime) < Math.abs(a.time - selectedTime) ? b : a, echoes[0]),
+    [selectedTime],
+  );
 
   const selectMoment = (time: number) => setParams({ t: String(time) });
   const format = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
