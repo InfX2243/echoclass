@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { EchoClassLogo } from '../components/EchoClassLogo';
 import { useAuth } from '../auth/useAuth';
+import type { AuthRole } from '../auth/AuthContext';
 
 export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const navigate = useNavigate();
@@ -10,15 +11,14 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [role, setRole] = useState<AuthRole>('STUDENT');
   const [code, setCode] = useState('');
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function submit(event: FormEvent) {
-    event.preventDefault();
-    setError('');
-    setBusy(true);
+    event.preventDefault(); setError(''); setBusy(true);
     try {
       if (needsConfirmation) {
         await confirmSignUp(email, code);
@@ -26,34 +26,24 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
         navigate('/dashboard', { replace: true });
         return;
       }
-
       if (isLogin) {
         await signIn(email, password);
         navigate('/dashboard', { replace: true });
       } else {
-        const result = await signUp(email, password, name);
-        if (result.needsConfirmation) {
-          setNeedsConfirmation(true);
-        } else {
-          await signIn(email, password);
-          navigate('/dashboard', { replace: true });
-        }
+        const result = await signUp(email, password, name, role);
+        if (result.needsConfirmation) setNeedsConfirmation(true);
+        else { await signIn(email, password); navigate('/dashboard', { replace: true }); }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed.');
-    } finally {
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   }
 
   async function resend() {
     setError('');
-    try {
-      await resendConfirmationCode(email);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to resend the code.');
-    }
+    try { await resendConfirmationCode(email); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Unable to resend the code.'); }
   }
 
-  return <main className="grid min-h-screen place-items-center bg-background px-5 py-12"><section className="w-full max-w-md"><Link to="/" className="mb-8 flex flex-col items-center text-center"><div className="mb-4 flex items-center gap-3"><EchoClassLogo className="size-11" /><span className="text-2xl font-semibold tracking-tight">EchoClass</span></div><p className="text-sm text-muted-foreground">Every lesson leaves a trace.</p></Link><div className="rounded-2xl border bg-card p-6 shadow-sm sm:p-8"><h1 className="text-2xl font-semibold tracking-tight">{needsConfirmation ? 'Confirm your account.' : isLogin ? 'Welcome back.' : 'Create your account.'}</h1><p className="mt-2 text-sm text-muted-foreground">{needsConfirmation ? `Enter the verification code sent to ${email}.` : isLogin ? 'Sign in to continue learning.' : 'Start building a learning trace with EchoClass.'}</p>{!isConfigured && <p className="mt-5 rounded-lg border border-amber-300/40 bg-amber-50 px-3 py-2 text-sm text-amber-900">Cognito is not configured. Add the Cognito environment variables to enable authentication.</p>}<form className="mt-7 space-y-5" onSubmit={submit}>{!isLogin && !needsConfirmation && <label className="block text-sm font-medium">Name<input value={name} onChange={e => setName(e.target.value)} className="mt-2 h-11 w-full rounded-lg border bg-background px-3" required /></label>}{!needsConfirmation && <label className="block text-sm font-medium">Email<input value={email} onChange={e => setEmail(e.target.value)} type="email" className="mt-2 h-11 w-full rounded-lg border bg-background px-3" required /></label>}{!needsConfirmation && <label className="block text-sm font-medium">Password<input value={password} onChange={e => setPassword(e.target.value)} type="password" className="mt-2 h-11 w-full rounded-lg border bg-background px-3" required minLength={8} /></label>}{needsConfirmation && <label className="block text-sm font-medium">Verification code<input value={code} onChange={e => setCode(e.target.value)} inputMode="numeric" className="mt-2 h-11 w-full rounded-lg border bg-background px-3" required /></label>}{error && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}<button disabled={busy || !isConfigured} className="h-11 w-full rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50">{busy ? 'Please wait…' : needsConfirmation ? 'Confirm account' : isLogin ? 'Sign In' : 'Sign Up'}</button></form>{needsConfirmation && <button type="button" onClick={resend} className="mt-4 w-full text-sm underline underline-offset-4">Resend confirmation code</button>}<p className="mt-6 text-center text-sm text-muted-foreground">{isLogin ? "Don't have an account? " : 'Already have an account? '}<Link className="font-medium text-foreground underline underline-offset-4" to={isLogin ? '/register' : '/login'}>{isLogin ? 'Sign up' : 'Sign in'}</Link></p></div></section></main>;
+  return <main className="grid min-h-screen place-items-center bg-background px-5 py-12"><section className="w-full max-w-md"><Link to="/" className="mb-8 flex flex-col items-center text-center"><div className="mb-4 flex items-center gap-3"><EchoClassLogo className="size-11" /><span className="text-2xl font-semibold tracking-tight">EchoClass</span></div><p className="text-sm text-muted-foreground">Every lesson leaves a trace.</p></Link><div className="rounded-2xl border bg-card p-6 shadow-sm sm:p-8"><h1 className="text-2xl font-semibold tracking-tight">{needsConfirmation ? 'Confirm your account.' : isLogin ? 'Welcome back.' : 'Create your account.'}</h1><p className="mt-2 text-sm text-muted-foreground">{needsConfirmation ? `Enter the verification code sent to ${email}.` : isLogin ? 'Sign in to continue learning.' : 'Start building a learning trace with EchoClass.'}</p>{!isConfigured && <p className="mt-5 rounded-lg border border-amber-300/40 bg-amber-50 px-3 py-2 text-sm text-amber-900">Cognito is not configured. Add the Cognito environment variables to enable authentication.</p>}<form className="mt-7 space-y-5" onSubmit={submit}>{!isLogin && !needsConfirmation && <label className="block text-sm font-medium">Name<input value={name} onChange={e => setName(e.target.value)} className="mt-2 h-11 w-full rounded-lg border bg-background px-3" required /></label>}{!isLogin && !needsConfirmation && <fieldset><legend className="text-sm font-medium">I am a...</legend><div className="mt-2 grid grid-cols-2 gap-3"><label className={`cursor-pointer rounded-lg border p-3 ${role === 'STUDENT' ? 'border-primary ring-1 ring-primary' : ''}`}><input type="radio" name="role" value="STUDENT" checked={role === 'STUDENT'} onChange={() => setRole('STUDENT')} className="sr-only" /><span className="font-medium">Student</span><span className="mt-1 block text-xs text-muted-foreground">Learn, practice and revisit.</span></label><label className={`cursor-pointer rounded-lg border p-3 ${role === 'TEACHER' ? 'border-primary ring-1 ring-primary' : ''}`}><input type="radio" name="role" value="TEACHER" checked={role === 'TEACHER'} onChange={() => setRole('TEACHER')} className="sr-only" /><span className="font-medium">Teacher</span><span className="mt-1 block text-xs text-muted-foreground">Create and manage classes.</span></label></div></fieldset>}{!needsConfirmation && <label className="block text-sm font-medium">Email<input value={email} onChange={e => setEmail(e.target.value)} type="email" className="mt-2 h-11 w-full rounded-lg border bg-background px-3" required /></label>}{!needsConfirmation && <label className="block text-sm font-medium">Password<input value={password} onChange={e => setPassword(e.target.value)} type="password" className="mt-2 h-11 w-full rounded-lg border bg-background px-3" required minLength={8} /></label>}{needsConfirmation && <label className="block text-sm font-medium">Verification code<input value={code} onChange={e => setCode(e.target.value)} inputMode="numeric" className="mt-2 h-11 w-full rounded-lg border bg-background px-3" required /></label>}{error && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}<button disabled={busy || !isConfigured} className="h-11 w-full rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50">{busy ? 'Please wait…' : needsConfirmation ? 'Confirm account' : isLogin ? 'Sign In' : 'Sign Up'}</button></form>{needsConfirmation && <button type="button" onClick={resend} className="mt-4 w-full text-sm underline underline-offset-4">Resend confirmation code</button>}<p className="mt-6 text-center text-sm text-muted-foreground">{isLogin ? "Don't have an account? " : 'Already have an account? '}<Link className="font-medium text-foreground underline underline-offset-4" to={isLogin ? '/register' : '/login'}>{isLogin ? 'Sign up' : 'Sign in'}</Link></p></div></section></main>;
 }
