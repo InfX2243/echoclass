@@ -1,9 +1,11 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter } from 'react-router-dom';
+
 import { AuthPage } from './pages/AuthPage';
 import { ClassesPage } from './pages/ClassesPage';
 import { ClassDetailPage } from './pages/ClassDetailPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { EchoesPage } from './pages/EchoesPage';
+import { LandingPage } from './pages/LandingPage';
 import { LessonPage } from './pages/LessonPage';
 import { RevisitsPage } from './pages/RevisitsPage';
 import { TeacherClassPage } from './pages/TeacherClassPage';
@@ -15,7 +17,7 @@ function PlaceholderPage({ title }: { title: string }) {
 }
 
 export const router = createBrowserRouter([
-  { path: '/', element: <Navigate to="/dashboard" replace /> },
+  { path: '/', element: <LandingPage /> },
   { path: '/login', element: <AuthPage mode="login" /> },
   { path: '/register', element: <AuthPage mode="register" /> },
   { path: '/dashboard', element: <DashboardPage /> },
