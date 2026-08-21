@@ -1,91 +1,19 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { useTheme } from './theme/ThemeProvider';
-
-function ThemeTestPage() {
-  const { theme, resolvedTheme, setTheme } = useTheme();
-
-  return (
-    <main className="min-h-screen bg-background p-8 text-foreground">
-      <div className="mx-auto max-w-xl space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">EchoClass Theme Test</h1>
-
-          <p className="text-muted-foreground">Current theme: {theme}</p>
-
-          <p className="text-muted-foreground">
-            Resolved theme: {resolvedTheme}
-          </p>
-        </div>
-
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => setTheme('light')}
-            className="rounded-md bg-primary px-4 py-2 text-primary-foreground"
-          >
-            Light
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTheme('dark')}
-            className="rounded-md bg-primary px-4 py-2 text-primary-foreground"
-          >
-            Dark
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTheme('system')}
-            className="rounded-md bg-secondary px-4 py-2 text-secondary-foreground"
-          >
-            System
-          </button>
-        </div>
-
-        <div className="rounded-xl border bg-card p-6 text-card-foreground">
-          <h2 className="font-semibold">Theme Preview</h2>
-
-          <p className="mt-2 text-muted-foreground">
-            This card should adapt correctly to both light and dark themes.
-          </p>
-        </div>
-      </div>
-    </main>
-  );
-}
+import { AuthPage } from './pages/AuthPage';
+import { DashboardPage } from './pages/DashboardPage';
 
 function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="p-8">
-      <h1 className="text-2xl font-semibold">{title}</h1>
-    </div>
-  );
+  return <div className="grid min-h-screen place-items-center bg-background p-8 text-center"><div><p className="text-sm text-muted-foreground">EchoClass</p><h1 className="mt-2 text-3xl font-semibold">{title}</h1><p className="mt-2 text-muted-foreground">This page is part of the next feature slice.</p></div></div>;
 }
 
 export const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <Navigate to="/login" replace />,
-  },
-
-  {
-    path: '/login',
-    element: <PlaceholderPage title="Login" />,
-  },
-
-  {
-    path: '/register',
-    element: <PlaceholderPage title="Register" />,
-  },
-
-  {
-    path: '/dashboard',
-    element: <ThemeTestPage />,
-  },
-
-  {
-    path: '*',
-    element: <PlaceholderPage title="Page Not Found" />,
-  },
+  { path: '/', element: <Navigate to="/dashboard" replace /> },
+  { path: '/login', element: <AuthPage mode="login" /> },
+  { path: '/register', element: <AuthPage mode="register" /> },
+  { path: '/dashboard', element: <DashboardPage /> },
+  { path: '/classes', element: <PlaceholderPage title="Classes" /> },
+  { path: '/echoes', element: <PlaceholderPage title="My Echoes" /> },
+  { path: '/revisits', element: <PlaceholderPage title="Revisit" /> },
+  { path: '/profile', element: <PlaceholderPage title="Profile" /> },
+  { path: '*', element: <PlaceholderPage title="Page Not Found" /> },
 ]);
