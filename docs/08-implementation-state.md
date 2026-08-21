@@ -15,7 +15,7 @@
 
 **Current phase:** Phase 16 — Student Lesson Experience
 
-**Next planned work:** continue Phase 16 from the first unfinished EC item after the already-completed teacher lesson-management work. Do not skip ahead to later domain/analytics/revisit implementation unless the plan is explicitly revised.
+**Next planned work after the current stopping point:** EC-162 — Timestamp URL state.
 
 ## Completed Foundation / Product Work
 
@@ -65,8 +65,8 @@
 
 ### Phase 16 — Student Lesson Experience
 
-- [ ] EC-160 — Authorized lesson loader.
-- [ ] EC-161 — HTML5 video player.
+- [x] EC-160 — Authorized lesson loader implemented.
+- [x] EC-161 — HTML5 video player implemented.
 - [ ] EC-162 — Timestamp URL state.
 - [ ] EC-163 — Echo reaction bar.
 - [ ] EC-164 — Echo composer.
@@ -87,7 +87,9 @@ Phases 18 onward remain governed by `docs/07-implementation-plan.md` and are int
 - Teacher class management was implemented and routed.
 - Teacher lesson management list was implemented and routed.
 - Theme implementation was refined to align with the visual prototype.
-- The repository was rebased/merged through the normal PR workflow before this state synchronization.
+- EC-160 authorized lesson loading was implemented.
+- EC-161 HTML5 video playback was implemented with a reusable player component, seek control, play/pause, volume control, duration display, and URL-backed current position integration.
+- The implementation work remains isolated in a draft PR for review.
 
 ## Execution Rules
 
