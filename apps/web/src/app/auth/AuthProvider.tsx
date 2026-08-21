@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { isCognitoConfigured } from '@/lib/auth/config';
 import { cognitoAuth } from '@/lib/auth/cognito';
@@ -6,13 +6,21 @@ import { AuthContext, type AuthUser } from './AuthContext';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const configured = isCognitoConfigured();
+  const [isLoading, setIsLoading] = useState(configured);
   const [user, setUser] = useState<AuthUser | null>(() => configured ? cognitoAuth.getCurrentUser() : null);
+
   const refreshUser = useCallback(() => {
     setUser(configured ? cognitoAuth.getCurrentUser() : null);
   }, [configured]);
+
+  useEffect(() => {
+    refreshUser();
+    setIsLoading(false);
+  }, [refreshUser]);
+
   const value = useMemo(() => ({
     user,
-    isLoading: false,
+    isLoading,
     isConfigured: configured,
     async signIn(username: string, password: string) { await cognitoAuth.signIn(username, password); refreshUser(); },
     async signUp(username: string, password: string, name: string) { const result = await cognitoAuth.signUp(username, password, name); return { needsConfirmation: !result.isSignUpComplete }; },
@@ -20,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async resendConfirmationCode(username: string) { await cognitoAuth.resendConfirmationCode(username); },
     async signOut() { cognitoAuth.signOut(); setUser(null); },
     async getAccessToken() { return configured ? cognitoAuth.getAccessToken() : null; },
-  }), [configured, refreshUser, user]);
+  }), [configured, isLoading, refreshUser, user]);
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
