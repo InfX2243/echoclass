@@ -2,6 +2,7 @@ import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft, LoaderCircle } from 'lucide-react';
 
 import { AppShell } from '../components/AppShell';
+import { LessonVideoPlayer } from '@/features/lessons/LessonVideoPlayer';
 import { useAuthorizedLesson } from '@/features/lessons/useAuthorizedLesson';
 import type { ApiError } from '@/features/lessons/client';
 
@@ -61,7 +62,7 @@ export function LessonPage() {
   }
 
   const { lesson, playback, timeline } = lessonQuery.data;
-  const selectedTime = Math.min(Number(params.get('t') ?? 0), timeline.durationSeconds);
+  const selectedTime = Math.min(Math.max(Number(params.get('t') ?? 0), 0), timeline.durationSeconds);
 
   return (
     <AppShell>
@@ -82,32 +83,17 @@ export function LessonPage() {
           <p className="mt-2 text-sm text-muted-foreground">{lesson.description}</p>
         </header>
 
-        <section className="overflow-hidden rounded-2xl border bg-black">
-          <video
-            className="aspect-video w-full bg-black"
-            controls
-            preload="metadata"
-            src={playback.playbackUrl}
-            onLoadedMetadata={(event) => {
-              event.currentTarget.currentTime = selectedTime;
-            }}
-          >
-            Your browser does not support HTML5 video.
-          </video>
-        </section>
+        <LessonVideoPlayer
+          src={playback.playbackUrl}
+          initialTime={selectedTime}
+          onTimeUpdate={(time) => setParams({ t: String(Math.floor(time)) }, { replace: true })}
+        />
 
         <section className="rounded-2xl border bg-card p-5 sm:p-6">
           <h2 className="font-semibold">Lesson information</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {Math.floor(lesson.durationSeconds / 60)}:{String(lesson.durationSeconds % 60).padStart(2, '0')} · Playback access expires {new Date(playback.expiresAt).toLocaleString()}
           </p>
-          <button
-            type="button"
-            className="mt-4 rounded-lg border px-3 py-2 text-sm hover:bg-muted"
-            onClick={() => setParams({ t: String(selectedTime) })}
-          >
-            Keep current moment at {Math.floor(selectedTime / 60)}:{String(selectedTime % 60).padStart(2, '0')}
-          </button>
         </section>
       </div>
     </AppShell>
