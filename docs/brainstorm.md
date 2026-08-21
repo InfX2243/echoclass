@@ -60,25 +60,25 @@ The system is designed as a real production application, not merely a prototype.
 
 To keep V1 stable and production-ready, we will deliberately NOT build:
 
-* Live video streaming
-* Live classroom communication
-* Video conferencing
-* Chat between students
-* Full LMS functionality
-* Assignment management
-* Exams/quizzes
-* Attendance tracking
-* Complex grading
-* Mobile native applications
-* AI tutor/chatbot
-* Automatic lecture transcription
-* Automatic AI summaries
-* Automatic AI-generated hotspots
-* Facial/emotion recognition
-* Advanced recommendation systems
-* Complex spaced-repetition algorithms
-* Public/social classrooms
-* Marketplace functionality
+- Live video streaming
+- Live classroom communication
+- Video conferencing
+- Chat between students
+- Full LMS functionality
+- Assignment management
+- Exams/quizzes
+- Attendance tracking
+- Complex grading
+- Mobile native applications
+- AI tutor/chatbot
+- Automatic lecture transcription
+- Automatic AI summaries
+- Automatic AI-generated hotspots
+- Facial/emotion recognition
+- Advanced recommendation systems
+- Complex spaced-repetition algorithms
+- Public/social classrooms
+- Marketplace functionality
 
 These may become future features.
 
@@ -94,33 +94,33 @@ EchoClass has two primary roles.
 
 A teacher can:
 
-* Create classes
-* View their classes
-* Add/remove students
-* Create lessons
-* Upload lesson videos
-* Publish/unpublish lessons
-* View lesson timelines
-* View aggregated student activity
-* Inspect hotspots
-* Add teacher notes/responses
-* See student feedback associated with lesson moments
+- Create classes
+- View their classes
+- Add/remove students
+- Create lessons
+- Upload lesson videos
+- Publish/unpublish lessons
+- View lesson timelines
+- View aggregated student activity
+- Inspect hotspots
+- Add teacher notes/responses
+- See student feedback associated with lesson moments
 
 ## Student
 
 A student can:
 
-* View classes they belong to
-* View published lessons in their classes
-* Watch lessons
-* Create Echoes
-* Add notes to Echoes
-* View their own Echo history
-* View collective lesson activity
-* Explore hotspots
-* Revisit previous moments
-* Mark a revisited moment as understood
-* Receive/view simple revisit reminders
+- View classes they belong to
+- View published lessons in their classes
+- Watch lessons
+- Create Echoes
+- Add notes to Echoes
+- View their own Echo history
+- View collective lesson activity
+- Explore hotspots
+- Revisit previous moments
+- Mark a revisited moment as understood
+- Receive/view simple revisit reminders
 
 ---
 
@@ -241,13 +241,13 @@ Students: 37
 
 A class contains:
 
-* `classId`
-* `teacherId`
-* `name`
-* `description`
-* `status`
-* `createdAt`
-* `updatedAt`
+- `classId`
+- `teacherId`
+- `name`
+- `description`
+- `status`
+- `createdAt`
+- `updatedAt`
 
 A teacher should only retrieve classes where:
 
@@ -544,10 +544,10 @@ V1 should have three primary types:
 
 Optional future types can include:
 
-* Question
-* Interesting
-* Review
-* Teacher-highlighted
+- Question
+- Interesting
+- Review
+- Teacher-highlighted
 
 But V1 stays with three.
 
@@ -668,10 +668,10 @@ Example:
 
 The timeline should show:
 
-* Personal Echoes
-* Collective activity
-* Hotspots
-* Teacher responses
+- Personal Echoes
+- Collective activity
+- Hotspots
+- Teacher responses
 
 ---
 
@@ -799,12 +799,12 @@ Lessons
 
 Teacher can:
 
-* Add students
-* Remove students
-* Create lesson
-* Edit lesson
-* Publish lesson
-* Archive lesson
+- Add students
+- Remove students
+- Create lesson
+- Edit lesson
+- Publish lesson
+- Archive lesson
 
 ---
 
@@ -1433,19 +1433,19 @@ show:
 
 At minimum:
 
-* Cognito authentication
-* Server-side authorization
-* Private S3 bucket
-* No client-controlled ownership fields
-* Input validation
-* Secure upload mechanism
-* Secure media delivery
-* HTTPS
-* Least-privilege IAM
-* Secrets/configuration outside source code
-* No sensitive information in frontend bundles
-* Proper CORS configuration
-* CloudWatch logging
+- Cognito authentication
+- Server-side authorization
+- Private S3 bucket
+- No client-controlled ownership fields
+- Input validation
+- Secure upload mechanism
+- Secure media delivery
+- HTTPS
+- Least-privilege IAM
+- Secrets/configuration outside source code
+- No sensitive information in frontend bundles
+- Proper CORS configuration
+- CloudWatch logging
 
 ---
 
@@ -1501,11 +1501,11 @@ If project time is constrained, a single AWS environment can be used initially, 
 
 Production V1 should use CloudWatch for:
 
-* Lambda logs
-* API errors
-* Application errors
-* Authentication-related diagnostics
-* Important operational events
+- Lambda logs
+- API errors
+- Application errors
+- Authentication-related diagnostics
+- Important operational events
 
 We should be able to answer:
 
@@ -1658,46 +1658,46 @@ We can combine some of these into shared pages where appropriate.
 
 ## P0 — Absolutely required
 
-* Cognito authentication
-* Teacher/student roles
-* Class creation
-* Class membership
-* Invite code
-* Access control
-* Lesson creation
-* Video upload
-* Video playback
-* Lesson publishing
-* Echo creation
-* Timestamp capture
-* Echo persistence
-* Personal Echo timeline
-* Collective timeline
-* Basic hotspot calculation
-* Teacher analytics
-* Production deployment
+- Cognito authentication
+- Teacher/student roles
+- Class creation
+- Class membership
+- Invite code
+- Access control
+- Lesson creation
+- Video upload
+- Video playback
+- Lesson publishing
+- Echo creation
+- Timestamp capture
+- Echo persistence
+- Personal Echo timeline
+- Collective timeline
+- Basic hotspot calculation
+- Teacher analytics
+- Production deployment
 
 ## P1 — Important but can follow core implementation
 
-* Teacher responses
-* Revisit scheduling
-* Revisit status
-* Audio lessons
-* Better timeline visualization
-* Improved upload experience
+- Teacher responses
+- Revisit scheduling
+- Revisit status
+- Audio lessons
+- Better timeline visualization
+- Improved upload experience
 
 ## P2 — Future
 
-* AI summaries
-* AI misconception analysis
-* AI-generated revision
-* Voice notes
-* PDF/slides
-* Advanced analytics
-* Automatic transcription
-* Real-time lessons
-* Notifications
-* Mobile apps
+- AI summaries
+- AI misconception analysis
+- AI-generated revision
+- Voice notes
+- PDF/slides
+- Advanced analytics
+- Automatic transcription
+- Real-time lessons
+- Notifications
+- Mobile apps
 
 ---
 
@@ -1707,58 +1707,58 @@ EchoClass V1 is considered complete when:
 
 ### Authentication
 
-* A new user can register.
-* Email verification works.
-* User can log in/out.
-* Role is established securely.
+- A new user can register.
+- Email verification works.
+- User can log in/out.
+- Role is established securely.
 
 ### Teacher
 
-* Teacher can create a class.
-* Teacher can generate an invite code.
-* Teacher can see only their classes.
-* Teacher can manage students.
-* Teacher can create lessons.
-* Teacher can upload video.
-* Teacher can publish lessons.
-* Teacher can see lesson activity.
+- Teacher can create a class.
+- Teacher can generate an invite code.
+- Teacher can see only their classes.
+- Teacher can manage students.
+- Teacher can create lessons.
+- Teacher can upload video.
+- Teacher can publish lessons.
+- Teacher can see lesson activity.
 
 ### Student
 
-* Student can join a class.
-* Student can see only their classes.
-* Student can see only published lessons.
-* Student can watch lessons.
-* Student can create timestamped Echoes.
-* Student can add notes.
-* Student can see their Echo history.
-* Student can revisit moments.
+- Student can join a class.
+- Student can see only their classes.
+- Student can see only published lessons.
+- Student can watch lessons.
+- Student can create timestamped Echoes.
+- Student can add notes.
+- Student can see their Echo history.
+- Student can revisit moments.
 
 ### Echo system
 
-* Echoes persist.
-* Echoes are associated with exact timestamps.
-* Collective activity is visible.
-* Hotspots are calculated.
-* Teacher can inspect hotspots.
+- Echoes persist.
+- Echoes are associated with exact timestamps.
+- Collective activity is visible.
+- Hotspots are calculated.
+- Teacher can inspect hotspots.
 
 ### Security
 
-* Unauthorized users cannot access protected resources.
-* Students cannot access unrelated classes.
-* Teachers cannot access unrelated classes.
-* S3 bucket is not publicly writable/readable.
-* Backend verifies ownership/membership.
+- Unauthorized users cannot access protected resources.
+- Students cannot access unrelated classes.
+- Teachers cannot access unrelated classes.
+- S3 bucket is not publicly writable/readable.
+- Backend verifies ownership/membership.
 
 ### Deployment
 
-* Frontend is publicly accessible.
-* APIs are deployed.
-* Cognito is configured.
-* Database is deployed.
-* Media storage is deployed.
-* CloudFront is configured.
-* Production application works end-to-end.
+- Frontend is publicly accessible.
+- APIs are deployed.
+- Cognito is configured.
+- Database is deployed.
+- Media storage is deployed.
+- CloudFront is configured.
+- Production application works end-to-end.
 
 ---
 

@@ -32,6 +32,7 @@ src/
 ## 2. Shared Components
 
 ### Application shell
+
 - `AppShell`
 - `AppHeader`
 - `AppSidebar`
@@ -41,6 +42,7 @@ src/
 - `Breadcrumbs`
 
 ### Feedback
+
 - `LoadingState`
 - `EmptyState`
 - `ErrorState`
@@ -49,6 +51,7 @@ src/
 - `ToastProvider`
 
 ### Data display
+
 - `StatCard`
 - `StatusBadge`
 - `Timestamp`
@@ -58,6 +61,7 @@ src/
 ## 3. Feature Modules
 
 ### Auth
+
 ```text
 features/auth/
 ├── api/
@@ -72,6 +76,7 @@ features/auth/
 ```
 
 ### Classes
+
 ```text
 features/classes/
 ├── api/
@@ -88,6 +93,7 @@ features/classes/
 ```
 
 ### Lessons
+
 ```text
 features/lessons/
 ├── api/
@@ -103,6 +109,7 @@ features/lessons/
 ```
 
 ### Echoes and Timeline
+
 ```text
 features/echoes/
 ├── api/
@@ -121,6 +128,7 @@ features/echoes/
 ```
 
 ### Analytics
+
 ```text
 features/analytics/
 ├── api/
@@ -134,6 +142,7 @@ features/analytics/
 ```
 
 ### Revisits
+
 ```text
 features/revisits/
 ├── api/
@@ -147,6 +156,7 @@ features/revisits/
 ## 4. Critical Component Contracts
 
 ### `VideoPlayer`
+
 Owns browser media integration and exposes controlled callbacks:
 
 ```ts
@@ -160,6 +170,7 @@ type VideoPlayerProps = {
 ```
 
 ### `EchoReactionBar`
+
 Receives the current timestamp and emits the selected type. It does not own persistence.
 
 ```ts
@@ -171,6 +182,7 @@ type EchoReactionBarProps = {
 ```
 
 ### `EchoTimeline`
+
 Receives normalized timeline data and emits selection events.
 
 ```ts
@@ -186,12 +198,15 @@ type EchoTimelineProps = {
 ```
 
 ### `MomentDetailsPanel`
+
 Pure contextual display for selected Echo/hotspot/response state.
 
 ## 5. State Boundaries
 
 ### Server state — TanStack Query
+
 Use for:
+
 - classes
 - lessons
 - memberships
@@ -202,7 +217,9 @@ Use for:
 - current application user
 
 ### Form state — React Hook Form + Zod
+
 Use for:
+
 - sign-in/sign-up
 - class form
 - lesson metadata
@@ -210,7 +227,9 @@ Use for:
 - teacher response
 
 ### Local UI state
+
 Use React state for:
+
 - selected timestamp
 - open dialogs
 - temporary player state
@@ -242,6 +261,7 @@ backend/src/
 ```
 
 Each domain should separate:
+
 - HTTP handler
 - input validation
 - authorization
@@ -268,6 +288,7 @@ Each domain should separate:
 ## 9. Acceptance Criteria
 
 A developer should be able to add or modify a feature without:
+
 - placing domain logic inside generic UI components,
 - duplicating API calls across pages,
 - coupling timeline logic to unrelated screens,

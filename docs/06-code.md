@@ -45,6 +45,7 @@ apps/web/
 ```
 
 Use:
+
 - Next.js App Router
 - React
 - TypeScript
@@ -72,6 +73,7 @@ apps/api/
 ```
 
 Use:
+
 - API Gateway HTTP API
 - AWS Lambda
 - TypeScript
@@ -126,13 +128,13 @@ Revisit
 Key enums:
 
 ```ts
-type UserRole = "TEACHER" | "STUDENT";
-type ClassStatus = "ACTIVE" | "ARCHIVED";
-type MembershipStatus = "ACTIVE" | "REMOVED";
-type LessonStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
-type ContentType = "VIDEO";
-type EchoType = "CONFUSED" | "IMPORTANT" | "INSIGHT";
-type RevisitStatus = "PENDING" | "COMPLETED" | "UNDERSTOOD";
+type UserRole = 'TEACHER' | 'STUDENT';
+type ClassStatus = 'ACTIVE' | 'ARCHIVED';
+type MembershipStatus = 'ACTIVE' | 'REMOVED';
+type LessonStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+type ContentType = 'VIDEO';
+type EchoType = 'CONFUSED' | 'IMPORTANT' | 'INSIGHT';
+type RevisitStatus = 'PENDING' | 'COMPLETED' | 'UNDERSTOOD';
 ```
 
 ## 6. DynamoDB Strategy
@@ -140,6 +142,7 @@ type RevisitStatus = "PENDING" | "COMPLETED" | "UNDERSTOOD";
 Finalize the table design from documented access patterns before coding repositories.
 
 Required access patterns include:
+
 - get application user by Cognito sub
 - list teacher classes
 - list student classes
@@ -177,6 +180,7 @@ Execute domain operation
 ```
 
 Never trust client-provided:
+
 - userId
 - teacherId
 - studentId
@@ -206,6 +210,7 @@ Short-lived CloudFront access is returned
 ```
 
 Use:
+
 - Private S3
 - CloudFront
 - Origin Access Control
@@ -238,6 +243,7 @@ Keep the algorithm in a pure, unit-tested module.
 Start with a simple deterministic scheduler.
 
 Suggested implementation boundary:
+
 - Echo event creates or updates revisit candidates where applicable.
 - Revisit stores lesson + timestamp + due date + status.
 - Student can open exact lesson moment.
@@ -248,6 +254,7 @@ Keep scheduling policy configurable and tested.
 ## 11. Error Model
 
 Return predictable HTTP status codes:
+
 - 400 validation
 - 401 authentication required/invalid
 - 403 forbidden
@@ -270,6 +277,7 @@ Never expose DynamoDB, Lambda, IAM, or raw stack traces to users.
 ## 12. Infrastructure
 
 AWS CDK + TypeScript should provision:
+
 - Cognito
 - DynamoDB
 - S3
@@ -291,6 +299,7 @@ Playwright
 ```
 
 Required coverage:
+
 - authorization helpers
 - validation
 - hotspot calculation
