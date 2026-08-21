@@ -14,3 +14,10 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}, acc
   if (!response.ok) throw new Error((payload as { error?: { message?: string } } | null)?.error?.message ?? `API request failed (${response.status})`);
   return payload as T;
 }
+
+export const apiClient = {
+  get: <T>(path: string, accessToken: string) => apiRequest<T>(path, { method: 'GET' }, accessToken),
+  post: <T>(path: string, body: unknown, accessToken: string) => apiRequest<T>(path, { method: 'POST', body: JSON.stringify(body) }, accessToken),
+  patch: <T>(path: string, body: unknown, accessToken: string) => apiRequest<T>(path, { method: 'PATCH', body: JSON.stringify(body) }, accessToken),
+  delete: <T>(path: string, accessToken: string) => apiRequest<T>(path, { method: 'DELETE' }, accessToken),
+};
