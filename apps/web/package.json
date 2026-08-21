@@ -5,13 +5,10 @@
   "type": "module",
   "scripts": {"dev": "vite", "build": "tsc -b && vite build", "lint": "eslint .", "preview": "vite preview"},
   "dependencies": {
-    "@aws-amplify/core": "^6.16.0",
-    "@aws-amplify/auth": "^1.9.0",
     "@base-ui/react": "^1.7.0",
     "@fontsource-variable/inter": "^5.3.0",
     "@hookform/resolvers": "^5.9.1",
     "@tanstack/react-query": "^5.101.4",
-    "aws-amplify": "^6.16.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.33.0",
