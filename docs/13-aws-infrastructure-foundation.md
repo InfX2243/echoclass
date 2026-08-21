@@ -5,7 +5,7 @@ This document records the implementation boundary for MVP-010 from the MVP execu
 ## Environment
 
 - Environment name: `dev`
-- Default development region: `ap-south-1` (Mumbai)
+- Default development region: `ap-south-2` (Hyderabad)
 - Infrastructure as code: AWS CDK with TypeScript
 - Stack name: `EchoClass-dev`
 
