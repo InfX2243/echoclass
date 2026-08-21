@@ -10,7 +10,7 @@ The stack defaults to `dev`. Override it with the CDK context value:
 pnpm --filter @echoclass/infrastructure exec cdk synth -c environment=dev
 ```
 
-The AWS region defaults to `ap-south-1` for local development and can be overridden with `CDK_DEFAULT_REGION`/`AWS_REGION`.
+The AWS region defaults to `ap-south-2` for local development and can be overridden with `CDK_DEFAULT_REGION`/`AWS_REGION`.
 
 This foundation intentionally creates no application resources yet. Resource work is introduced by the subsequent MVP infrastructure steps:
 
