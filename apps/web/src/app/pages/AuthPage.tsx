@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+import { setDemoSession, type DemoRole } from '../auth/demoSession';
 import { EchoClassLogo } from '../components/EchoClassLogo';
 
 const demoAccounts = {
-  'student@echoclass.demo': { password: 'Student123!', destination: '/dashboard' },
-  'teacher@echoclass.demo': { password: 'Teacher123!', destination: '/teacher/dashboard' },
+  'student@echoclass.demo': { password: 'Student123!', destination: '/dashboard', role: 'student' as DemoRole },
+  'teacher@echoclass.demo': { password: 'Teacher123!', destination: '/teacher/dashboard', role: 'teacher' as DemoRole },
 } as const;
 
 export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
@@ -16,11 +17,12 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const [error, setError] = useState('');
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError('');
+    event.preventDefault(); setError('');
     if (!isLogin) { setError('Account registration is not connected yet. Use a demo account to explore EchoClass.'); return; }
-    const account = demoAccounts[email.toLowerCase() as keyof typeof demoAccounts];
+    const normalizedEmail = email.toLowerCase();
+    const account = demoAccounts[normalizedEmail as keyof typeof demoAccounts];
     if (!account || account.password !== password) { setError('Those credentials do not match an EchoClass demo account.'); return; }
+    setDemoSession({ email: normalizedEmail, role: account.role });
     navigate(account.destination);
   }
 
