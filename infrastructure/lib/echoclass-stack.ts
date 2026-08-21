@@ -1,3 +1,5 @@
+import * as path from 'node:path';
+
 import * as cdk from 'aws-cdk-lib';
 import { aws_apigatewayv2 as apigatewayv2, aws_cloudfront as cloudfront, aws_dynamodb as dynamodb, aws_iam as iam, aws_lambda as lambda, aws_logs as logs, aws_s3 as s3 } from 'aws-cdk-lib';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
@@ -13,6 +15,7 @@ export class EchoClassStack extends cdk.Stack {
 
     const { environmentName } = props;
     const isProduction = environmentName === 'prod';
+    const lambdaAssetPath = path.resolve(import.meta.dirname, '../lambda');
 
     this.templateOptions.metadata = { Environment: environmentName, Project: 'EchoClass' };
 
@@ -53,16 +56,22 @@ export class EchoClassStack extends cdk.Stack {
     });
     mediaBucket.addToResourcePolicy(new iam.PolicyStatement({ effect: iam.Effect.ALLOW, principals: [new iam.ServicePrincipal('cloudfront.amazonaws.com')], actions: ['s3:GetObject'], resources: [mediaBucket.arnForObjects('*')], conditions: { StringEquals: { 'AWS:SourceArn': `arn:${cdk.Aws.PARTITION}:cloudfront::${cdk.Aws.ACCOUNT_ID}:distribution/${mediaDistribution.ref}` } } }));
 
+    const apiLogGroup = new logs.LogGroup(this, 'ApiLogGroup', {
+      logGroupName: `/aws/lambda/EchoClass-${environmentName}-api`,
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: isProduction ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+    });
+
     const apiHandler = new lambda.Function(this, 'ApiHandler', {
       functionName: `EchoClass-${environmentName}-api`,
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'api-handler.handler',
-      code: lambda.Code.fromAsset('lambda'),
+      code: lambda.Code.fromAsset(lambdaAssetPath),
       timeout: cdk.Duration.seconds(10),
       memorySize: 256,
       tracing: lambda.Tracing.PASS_THROUGH,
       environment: { TABLE_NAME: applicationTable.tableName, MEDIA_BUCKET_NAME: mediaBucket.bucketName, MEDIA_DISTRIBUTION_DOMAIN: mediaDistribution.attrDomainName },
-      logRetention: logs.RetentionDays.ONE_WEEK,
+      logGroup: apiLogGroup,
     });
     applicationTable.grantReadWriteData(apiHandler);
     mediaBucket.grantReadWrite(apiHandler);
