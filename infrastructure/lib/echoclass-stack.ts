@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import { aws_dynamodb as dynamodb } from 'aws-cdk-lib';
+import { aws_dynamodb as dynamodb, aws_s3 as s3 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 
 export interface EchoClassStackProps extends cdk.StackProps {
@@ -43,10 +43,34 @@ export class EchoClassStack extends cdk.Stack {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
+    const mediaBucket = new s3.Bucket(this, 'MediaBucket', {
+      bucketName: `echoclass-${environmentName}-media-${this.account}`,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
+      removalPolicy: environmentName === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: environmentName !== 'prod',
+      lifecycleRules: [
+        {
+          id: 'AbandonedUploads',
+          enabled: true,
+          prefix: 'uploads/pending/',
+          expiration: cdk.Duration.days(7),
+        },
+      ],
+    });
+
     new cdk.CfnOutput(this, 'ApplicationTableName', {
       value: applicationTable.tableName,
       description: 'EchoClass application DynamoDB table name',
       exportName: `${environmentName}-EchoClass-ApplicationTableName`,
+    });
+
+    new cdk.CfnOutput(this, 'MediaBucketName', {
+      value: mediaBucket.bucketName,
+      description: 'EchoClass private media bucket name',
+      exportName: `${environmentName}-EchoClass-MediaBucketName`,
     });
 
     new cdk.CfnOutput(this, 'EnvironmentName', {
