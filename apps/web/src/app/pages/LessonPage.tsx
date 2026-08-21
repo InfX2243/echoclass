@@ -3,7 +3,7 @@ import { ArrowLeft, LoaderCircle } from 'lucide-react';
 
 import { AppShell } from '../components/AppShell';
 import { useAuthorizedLesson } from '@/features/lessons/useAuthorizedLesson';
-import type { ApiError } from '@/features/lessons/client';
+import type { ApiError } from '@/lib/api/errors';
 
 function LessonState({ title, description }: { title: string; description: string }) {
   return (
