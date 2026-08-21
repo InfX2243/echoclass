@@ -33,9 +33,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     const initialize = async () => {
       refreshUser();
-      try { if (!cancelled) await bootstrapApplicationUser(); }
-      catch (error) { if (!cancelled) console.error('Unable to bootstrap application user', error); }
-      finally { if (!cancelled) setIsLoading(false); }
+      try {
+        if (!cancelled) await bootstrapApplicationUser();
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Unable to bootstrap application user', error);
+          setUser((current) => current);
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
     };
     void initialize();
     return () => { cancelled = true; };
