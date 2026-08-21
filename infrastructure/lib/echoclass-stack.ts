@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
-import { aws_cloudfront as cloudfront, aws_dynamodb as dynamodb, aws_s3 as s3 } from 'aws-cdk-lib';
+import { aws_apigatewayv2 as apigatewayv2, aws_cloudfront as cloudfront, aws_dynamodb as dynamodb, aws_iam as iam, aws_lambda as lambda, aws_logs as logs, aws_s3 as s3 } from 'aws-cdk-lib';
+import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { Construct } from 'constructs';
 
 export interface EchoClassStackProps extends cdk.StackProps {
@@ -11,11 +12,9 @@ export class EchoClassStack extends cdk.Stack {
     super(scope, id, props);
 
     const { environmentName } = props;
+    const isProduction = environmentName === 'prod';
 
-    this.templateOptions.metadata = {
-      Environment: environmentName,
-      Project: 'EchoClass',
-    };
+    this.templateOptions.metadata = { Environment: environmentName, Project: 'EchoClass' };
 
     const applicationTable = new dynamodb.Table(this, 'ApplicationTable', {
       tableName: `EchoClass-${environmentName}-application`,
@@ -23,25 +22,11 @@ export class EchoClassStack extends cdk.Stack {
       sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       encryption: dynamodb.TableEncryption.AWS_MANAGED,
-      pointInTimeRecoverySpecification: {
-        pointInTimeRecoveryEnabled: true,
-      },
-      removalPolicy: environmentName === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+      pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
+      removalPolicy: isProduction ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
     });
-
-    applicationTable.addGlobalSecondaryIndex({
-      indexName: 'GSI1',
-      partitionKey: { name: 'GSI1PK', type: dynamodb.AttributeType.STRING },
-      sortKey: { name: 'GSI1SK', type: dynamodb.AttributeType.STRING },
-      projectionType: dynamodb.ProjectionType.ALL,
-    });
-
-    applicationTable.addGlobalSecondaryIndex({
-      indexName: 'GSI2',
-      partitionKey: { name: 'GSI2PK', type: dynamodb.AttributeType.STRING },
-      sortKey: { name: 'GSI2SK', type: dynamodb.AttributeType.STRING },
-      projectionType: dynamodb.ProjectionType.ALL,
-    });
+    applicationTable.addGlobalSecondaryIndex({ indexName: 'GSI1', partitionKey: { name: 'GSI1PK', type: dynamodb.AttributeType.STRING }, sortKey: { name: 'GSI1SK', type: dynamodb.AttributeType.STRING }, projectionType: dynamodb.ProjectionType.ALL });
+    applicationTable.addGlobalSecondaryIndex({ indexName: 'GSI2', partitionKey: { name: 'GSI2PK', type: dynamodb.AttributeType.STRING }, sortKey: { name: 'GSI2SK', type: dynamodb.AttributeType.STRING }, projectionType: dynamodb.ProjectionType.ALL });
 
     const mediaBucket = new s3.Bucket(this, 'MediaBucket', {
       bucketName: `echoclass-${environmentName}-media-${this.account}`,
@@ -49,117 +34,48 @@ export class EchoClassStack extends cdk.Stack {
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
-      removalPolicy: environmentName === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
-      autoDeleteObjects: environmentName !== 'prod',
-      lifecycleRules: [
-        {
-          id: 'AbandonedUploads',
-          enabled: true,
-          prefix: 'uploads/pending/',
-          expiration: cdk.Duration.days(7),
-        },
-      ],
+      removalPolicy: isProduction ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: !isProduction,
+      lifecycleRules: [{ id: 'AbandonedUploads', enabled: true, prefix: 'uploads/pending/', expiration: cdk.Duration.days(7) }],
     });
 
     const mediaOriginAccessControl = new cloudfront.CfnOriginAccessControl(this, 'MediaOriginAccessControl', {
-      originAccessControlConfig: {
-        name: `EchoClass-${environmentName}-MediaOAC`,
-        description: 'CloudFront access to the private EchoClass media bucket',
-        originAccessControlOriginType: 's3',
-        signingBehavior: 'always',
-        signingProtocol: 'sigv4',
-      },
+      originAccessControlConfig: { name: `EchoClass-${environmentName}-MediaOAC`, description: 'CloudFront access to private EchoClass media', originAccessControlOriginType: 's3', signingBehavior: 'always', signingProtocol: 'sigv4' },
     });
-
     const mediaDistribution = new cloudfront.CfnDistribution(this, 'MediaDistribution', {
       distributionConfig: {
-        enabled: true,
-        comment: `EchoClass ${environmentName} private media delivery`,
-        defaultRootObject: '',
-        priceClass: 'PriceClass_100',
-        origins: [
-          {
-            id: 'MediaBucketOrigin',
-            domainName: mediaBucket.bucketRegionalDomainName,
-            originAccessControlId: mediaOriginAccessControl.ref,
-            s3OriginConfig: {
-              originAccessIdentity: '',
-            },
-          },
-        ],
-        defaultCacheBehavior: {
-          targetOriginId: 'MediaBucketOrigin',
-          viewerProtocolPolicy: 'redirect-to-https',
-          allowedMethods: ['GET', 'HEAD'],
-          cachedMethods: ['GET', 'HEAD'],
-          compress: true,
-          forwardedValues: {
-            queryString: true,
-            cookies: { forward: 'none' },
-          },
-        },
-        restrictions: {
-          geoRestriction: { restrictionType: 'none' },
-        },
-        viewerCertificate: {
-          cloudFrontDefaultCertificate: true,
-        },
+        enabled: true, comment: `EchoClass ${environmentName} private media delivery`, defaultRootObject: '', priceClass: 'PriceClass_100',
+        origins: [{ id: 'MediaBucketOrigin', domainName: mediaBucket.bucketRegionalDomainName, originAccessControlId: mediaOriginAccessControl.ref, s3OriginConfig: { originAccessIdentity: '' } }],
+        defaultCacheBehavior: { targetOriginId: 'MediaBucketOrigin', viewerProtocolPolicy: 'redirect-to-https', allowedMethods: ['GET', 'HEAD'], cachedMethods: ['GET', 'HEAD'], compress: true, forwardedValues: { queryString: true, cookies: { forward: 'none' } } },
+        restrictions: { geoRestriction: { restrictionType: 'none' } },
+        viewerCertificate: { cloudFrontDefaultCertificate: true },
       },
     });
+    mediaBucket.addToResourcePolicy(new iam.PolicyStatement({ effect: iam.Effect.ALLOW, principals: [new iam.ServicePrincipal('cloudfront.amazonaws.com')], actions: ['s3:GetObject'], resources: [mediaBucket.arnForObjects('*')], conditions: { StringEquals: { 'AWS:SourceArn': `arn:${cdk.Aws.PARTITION}:cloudfront::${cdk.Aws.ACCOUNT_ID}:distribution/${mediaDistribution.ref}` } } }));
 
-    mediaDistribution.addPropertyOverride(
-      'DistributionConfig.Origins.0.S3OriginConfig.OriginAccessIdentity',
-      '',
-    );
-
-    mediaBucket.addToResourcePolicy(
-      new cdk.aws_iam.PolicyStatement({
-        effect: cdk.aws_iam.Effect.ALLOW,
-        principals: [new cdk.aws_iam.ServicePrincipal('cloudfront.amazonaws.com')],
-        actions: ['s3:GetObject'],
-        resources: [mediaBucket.arnForObjects('*')],
-        conditions: {
-          StringEquals: {
-            'AWS:SourceArn': `arn:${cdk.Aws.PARTITION}:cloudfront::${cdk.Aws.ACCOUNT_ID}:distribution/${mediaDistribution.ref}`,
-          },
-        },
-      }),
-    );
-
-    new cdk.CfnOutput(this, 'ApplicationTableName', {
-      value: applicationTable.tableName,
-      description: 'EchoClass application DynamoDB table name',
-      exportName: `${environmentName}-EchoClass-ApplicationTableName`,
+    const apiHandler = new lambda.Function(this, 'ApiHandler', {
+      functionName: `EchoClass-${environmentName}-api`,
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: 'api-handler.handler',
+      code: lambda.Code.fromAsset('lambda'),
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 256,
+      tracing: lambda.Tracing.PASS_THROUGH,
+      environment: { TABLE_NAME: applicationTable.tableName, MEDIA_BUCKET_NAME: mediaBucket.bucketName, MEDIA_DISTRIBUTION_DOMAIN: mediaDistribution.attrDomainName },
+      logRetention: logs.RetentionDays.ONE_WEEK,
     });
+    applicationTable.grantReadWriteData(apiHandler);
+    mediaBucket.grantReadWrite(apiHandler);
 
-    new cdk.CfnOutput(this, 'MediaBucketName', {
-      value: mediaBucket.bucketName,
-      description: 'EchoClass private media bucket name',
-      exportName: `${environmentName}-EchoClass-MediaBucketName`,
-    });
+    const httpApi = new apigatewayv2.HttpApi(this, 'HttpApi', { apiName: `EchoClass-${environmentName}-api`, createDefaultStage: true, corsPreflight: { allowOrigins: ['http://localhost:5173'], allowMethods: [apigatewayv2.CorsHttpMethod.ANY], allowHeaders: ['content-type', 'authorization'], allowCredentials: true } });
+    httpApi.addRoutes({ path: '/health', methods: [apigatewayv2.HttpMethod.GET], integration: new HttpLambdaIntegration('HealthIntegration', apiHandler) });
 
-    new cdk.CfnOutput(this, 'MediaDistributionId', {
-      value: mediaDistribution.ref,
-      description: 'CloudFront distribution ID for private EchoClass media',
-      exportName: `${environmentName}-EchoClass-MediaDistributionId`,
-    });
-
-    new cdk.CfnOutput(this, 'MediaDistributionDomainName', {
-      value: mediaDistribution.attrDomainName,
-      description: 'CloudFront distribution domain for private EchoClass media',
-      exportName: `${environmentName}-EchoClass-MediaDistributionDomainName`,
-    });
-
-    new cdk.CfnOutput(this, 'EnvironmentName', {
-      value: environmentName,
-      description: 'EchoClass deployment environment',
-      exportName: `${environmentName}-EchoClass-Environment`,
-    });
-
-    new cdk.CfnOutput(this, 'AwsRegion', {
-      value: cdk.Stack.of(this).region,
-      description: 'AWS region used by this environment',
-      exportName: `${environmentName}-EchoClass-Region`,
-    });
+    new cdk.CfnOutput(this, 'ApplicationTableName', { value: applicationTable.tableName, description: 'EchoClass application DynamoDB table name', exportName: `${environmentName}-EchoClass-ApplicationTableName` });
+    new cdk.CfnOutput(this, 'MediaBucketName', { value: mediaBucket.bucketName, description: 'EchoClass private media bucket name', exportName: `${environmentName}-EchoClass-MediaBucketName` });
+    new cdk.CfnOutput(this, 'MediaDistributionId', { value: mediaDistribution.ref, description: 'CloudFront distribution ID for private EchoClass media', exportName: `${environmentName}-EchoClass-MediaDistributionId` });
+    new cdk.CfnOutput(this, 'MediaDistributionDomainName', { value: mediaDistribution.attrDomainName, description: 'CloudFront distribution domain for private EchoClass media', exportName: `${environmentName}-EchoClass-MediaDistributionDomainName` });
+    new cdk.CfnOutput(this, 'ApiUrl', { value: httpApi.url, description: 'EchoClass HTTP API URL', exportName: `${environmentName}-EchoClass-ApiUrl` });
+    new cdk.CfnOutput(this, 'EnvironmentName', { value: environmentName, description: 'EchoClass deployment environment', exportName: `${environmentName}-EchoClass-Environment` });
+    new cdk.CfnOutput(this, 'AwsRegion', { value: cdk.Stack.of(this).region, description: 'AWS region used by this environment', exportName: `${environmentName}-EchoClass-Region` });
   }
 }
