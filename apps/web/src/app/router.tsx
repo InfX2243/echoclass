@@ -11,5 +11,22 @@ import { SettingsPage } from './pages/SettingsPage';
 import { TeacherClassPage } from './pages/TeacherClassPage';
 import { TeacherDashboardPage } from './pages/TeacherDashboardPage';
 import { TeacherLessonsPage } from './pages/TeacherLessonsPage';
-function PlaceholderPage({ title }: { title: string }) { return <div className="grid min-h-screen place-items-center bg-background p-8 text-center"><div><p className="text-sm text-muted-foreground">EchoClass</p><h1 className="mt-2 text-3xl font-semibold">{title}</h1><p className="mt-2 text-muted-foreground">This page is part of the next feature slice.</p></div></div>; }
-export const router = createBrowserRouter([{ path: '/', element: <LandingPage /> }, { path: '/login', element: <AuthPage mode="login" /> }, { path: '/register', element: <AuthPage mode="register" /> }, { path: '/dashboard', element: <DashboardPage /> }, { path: '/teacher/dashboard', element: <TeacherDashboardPage /> }, { path: '/teacher/classes/:classId', element: <TeacherClassPage /> }, { path: '/teacher/classes/:classId/lessons', element: <TeacherLessonsPage /> }, { path: '/classes', element: <ClassesPage /> }, { path: '/classes/:classId', element: <ClassDetailPage /> }, { path: '/lessons/:lessonId', element: <LessonPage /> }, { path: '/echoes', element: <EchoesPage /> }, { path: '/revisits', element: <RevisitsPage /> }, { path: '/settings', element: <SettingsPage /> }, { path: '/profile', element: <PlaceholderPage title="Profile" /> }, { path: '*', element: <PlaceholderPage title="Page Not Found" /> }]);
+import { PlaceholderPage } from './PlaceholderPage';
+
+export const router = createBrowserRouter([
+  { path: '/', element: <LandingPage /> },
+  { path: '/login', element: <AuthPage mode="login" /> },
+  { path: '/register', element: <AuthPage mode="register" /> },
+  { path: '/dashboard', element: <DashboardPage /> },
+  { path: '/teacher/dashboard', element: <TeacherDashboardPage /> },
+  { path: '/teacher/classes/:classId', element: <TeacherClassPage /> },
+  { path: '/teacher/classes/:classId/lessons', element: <TeacherLessonsPage /> },
+  { path: '/classes', element: <ClassesPage /> },
+  { path: '/classes/:classId', element: <ClassDetailPage /> },
+  { path: '/lessons/:lessonId', element: <LessonPage /> },
+  { path: '/echoes', element: <EchoesPage /> },
+  { path: '/revisits', element: <RevisitsPage /> },
+  { path: '/settings', element: <SettingsPage /> },
+  { path: '/profile', element: <PlaceholderPage title="Profile" /> },
+  { path: '*', element: <PlaceholderPage title="Page Not Found" /> },
+]);
