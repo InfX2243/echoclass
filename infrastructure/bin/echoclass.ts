@@ -6,7 +6,7 @@ const app = new cdk.App();
 
 const environmentName = app.node.tryGetContext('environment') ?? process.env.ECHOCLASS_ENV ?? 'dev';
 const account = process.env.CDK_DEFAULT_ACCOUNT;
-const region = process.env.CDK_DEFAULT_REGION ?? process.env.AWS_REGION ?? 'ap-south-1';
+const region = process.env.CDK_DEFAULT_REGION ?? process.env.AWS_REGION ?? 'ap-south-2';
 
 new EchoClassStack(app, `EchoClass-${environmentName}`, {
   env: { account, region },
