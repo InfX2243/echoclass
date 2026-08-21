@@ -7,6 +7,14 @@ import { AuthContext, type AuthUser } from './AuthContext';
 
 type MeResponse = { user: { id: string; username: string; email?: string | null; role?: AuthRole | null; createdAt: string } };
 
+function isMeResponse(value: unknown): value is MeResponse {
+  if (!value || typeof value !== 'object') return false;
+  const user = (value as { user?: unknown }).user;
+  if (!user || typeof user !== 'object') return false;
+  const candidate = user as Record<string, unknown>;
+  return typeof candidate.id === 'string' && typeof candidate.username === 'string';
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const configured = isCognitoConfigured();
   const [isLoading, setIsLoading] = useState(configured);
@@ -16,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const accessToken = configured ? cognitoAuth.getAccessToken() : null;
     if (!accessToken) { setUser(null); return; }
     const response = await apiRequest<MeResponse>('/api/v1/me', undefined, accessToken);
+    if (!isMeResponse(response)) throw new Error('Application API returned an invalid /me response');
     setUser((current) => ({
       userId: response.user.id,
       username: response.user.username || current?.username || '',
@@ -36,10 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         if (!cancelled) await bootstrapApplicationUser();
       } catch (error) {
-        if (!cancelled) {
-          console.error('Unable to bootstrap application user', error);
-          setUser((current) => current);
-        }
+        if (!cancelled) console.error('Unable to bootstrap application user', error);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
