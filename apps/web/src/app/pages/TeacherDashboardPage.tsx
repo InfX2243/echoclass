@@ -1,33 +1,32 @@
-import { ArrowRight, BookOpen, Flame, Users } from 'lucide-react';
+import { ArrowRight, BookOpen, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
+import { EmptyState } from '../components/EmptyState';
+import { useAuth } from '../auth/useAuth';
+import { apiClient } from '../../lib/api/client';
+import { useEffect, useState } from 'react';
 
-const metrics = [
-  { label: 'Classes', value: '2', icon: BookOpen },
-  { label: 'Students', value: '52', icon: Users },
-  { label: 'Recent Echo activity', value: '25', icon: Flame },
-];
-
-const classes = [
-  { id: 'physics', name: 'Introduction to Physics', students: 28, lessons: 8, activity: 'High activity' },
-  { id: 'history', name: 'Modern World History', students: 24, lessons: 12, activity: 'Steady activity' },
-];
-
-const hotspots = [
-  { lesson: 'Forces and why things move', className: 'Introduction to Physics', time: '10:51', echoes: 14 },
-  { lesson: 'The world connected by trade', className: 'Modern World History', time: '20:18', echoes: 11 },
-];
+type ClassItem = { id: string; name: string; description: string | null };
 
 export function TeacherDashboardPage() {
+  const { getAccessToken } = useAuth();
+  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  async function loadClasses() { try { const token = await getAccessToken(); if (!token) throw new Error('Your session has expired.'); setClasses((await apiClient.get<{ classes: ClassItem[] }>('/classes', token)).classes); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Unable to load classes.'); } finally { setLoading(false); } }
+  useEffect(() => { void loadClasses(); }, []);
+  async function createClass(event: React.FormEvent) { event.preventDefault(); if (!name.trim()) return; setCreating(true); setError(null); try { const token = await getAccessToken(); if (!token) throw new Error('Your session has expired.'); await apiClient.post('/classes', { name: name.trim(), description: description.trim() || undefined }, token); setName(''); setDescription(''); setShowCreate(false); await loadClasses(); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Unable to create class.'); } finally { setCreating(false); } }
   return <AppShell><div className="space-y-9">
-    <header><p className="text-sm font-medium text-muted-foreground">Teacher dashboard</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">See where learning is happening.</h1><p className="mt-2 max-w-2xl text-muted-foreground">A quiet overview of your classes, lessons, and the moments students are engaging with most.</p></header>
-
-    <section className="grid gap-4 sm:grid-cols-3">
-      {metrics.map(({ label, value, icon: Icon }) => <article key={label} className="rounded-xl border bg-card p-5"><Icon className="size-5 text-muted-foreground" /><p className="mt-5 text-2xl font-semibold">{value}</p><p className="mt-1 text-sm text-muted-foreground">{label}</p></article>)}
+    <header><p className="text-sm font-medium text-muted-foreground">Teacher dashboard</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">See where learning is happening.</h1><p className="mt-2 max-w-2xl text-muted-foreground">Manage the classes you teach and build your learning spaces.</p></header>
+    {error && <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div>}
+    <section className="grid gap-4 sm:grid-cols-2"><article className="rounded-xl border bg-card p-5"><BookOpen className="size-5 text-muted-foreground" /><p className="mt-5 text-2xl font-semibold">{loading ? '—' : classes.length}</p><p className="mt-1 text-sm text-muted-foreground">Classes</p></article><article className="rounded-xl border bg-card p-5"><Users className="size-5 text-muted-foreground" /><p className="mt-5 text-2xl font-semibold">—</p><p className="mt-1 text-sm text-muted-foreground">Students</p></article></section>
+    <section><div className="mb-4 flex items-end justify-between"><div><h2 className="text-lg font-semibold">My classes</h2><p className="mt-1 text-sm text-muted-foreground">Your current teaching spaces.</p></div><button type="button" onClick={() => setShowCreate(true)} className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Create class</button></div>
+      {showCreate && <form onSubmit={createClass} className="mb-5 rounded-xl border bg-card p-5 space-y-3"><input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Class name" className="w-full rounded-lg border bg-background px-3 py-2 text-sm" /><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Description (optional)" className="min-h-24 w-full rounded-lg border bg-background px-3 py-2 text-sm" /><div className="flex gap-2"><button disabled={creating} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">{creating ? 'Creating…' : 'Create class'}</button><button type="button" onClick={() => setShowCreate(false)} className="rounded-lg border px-4 py-2 text-sm">Cancel</button></div></form>}
+      {loading ? <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">Loading your classes…</div> : classes.length === 0 ? <EmptyState title="Create your first class" description="Your teaching space starts here. Create a class and then share its invite code with your students." action={<button type="button" onClick={() => setShowCreate(true)} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Create class</button>} /> : <div className="grid gap-4 md:grid-cols-2">{classes.map((item) => <Link key={item.id} to={`/teacher/classes/${item.id}`} className="rounded-xl border bg-card p-5 transition hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-sm"><div className="flex items-start justify-between"><div><h3 className="font-semibold">{item.name}</h3><p className="mt-2 text-sm text-muted-foreground">{item.description ?? 'No description provided.'}</p></div><ArrowRight className="size-4 text-muted-foreground" /></div></Link>)}</div>}
     </section>
-
-    <section><div className="mb-4 flex items-end justify-between"><div><h2 className="text-lg font-semibold">My classes</h2><p className="mt-1 text-sm text-muted-foreground">Your current teaching spaces.</p></div><button type="button" className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Create class</button></div><div className="grid gap-4 md:grid-cols-2">{classes.map((item) => <Link key={item.id} to={`/classes/${item.id}`} className="rounded-xl border bg-card p-5 transition hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-sm"><div className="flex items-start justify-between"><div><h3 className="font-semibold">{item.name}</h3><p className="mt-1 text-sm text-muted-foreground">{item.activity}</p></div><ArrowRight className="size-4 text-muted-foreground" /></div><div className="mt-6 grid grid-cols-2 gap-3"><div className="rounded-lg bg-muted/60 p-3"><p className="text-lg font-semibold">{item.students}</p><p className="text-xs text-muted-foreground">Students</p></div><div className="rounded-lg bg-muted/60 p-3"><p className="text-lg font-semibold">{item.lessons}</p><p className="text-xs text-muted-foreground">Lessons</p></div></div></Link>)}</div></section>
-
-    <section className="rounded-xl border bg-card p-5 sm:p-6"><div className="mb-5"><h2 className="text-lg font-semibold">Recent hotspots</h2><p className="mt-1 text-sm text-muted-foreground">Moments with concentrated Echo activity. Activity indicates engagement, not automatically confusion.</p></div><div className="space-y-3">{hotspots.map((item) => <div key={item.lesson} className="flex items-center gap-4 rounded-lg border bg-background p-4"><div className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#EEF9F3]"><Flame className="size-4 text-[#286846]" /></div><div className="min-w-0 flex-1"><p className="font-medium">{item.lesson}</p><p className="mt-1 text-xs text-muted-foreground">{item.className} · {item.time}</p></div><span className="text-sm font-medium">{item.echoes} Echoes</span></div>)}</div></section>
   </div></AppShell>;
 }
