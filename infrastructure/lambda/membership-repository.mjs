@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, TransactWriteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const tableName = () => process.env.TABLE_NAME;
@@ -12,11 +12,42 @@ const invitePk = (code) => `INVITE#${code}`;
 const newCode = () => randomBytes(6).toString('base64url').toUpperCase();
 
 export const createInvite = async ({ classId, teacherId }) => {
+  const classResult = await client.send(new GetCommand({ TableName: tableName(), Key: { PK: classPk(classId), SK: 'PROFILE' } }));
+  const classItem = classResult.Item;
+  if (!classItem || classItem.teacherId !== teacherId) return null;
+
+  if (classItem.inviteCode) {
+    const existing = await client.send(new GetCommand({ TableName: tableName(), Key: { PK: invitePk(classItem.inviteCode), SK: 'PROFILE' } }));
+    if (existing.Item) return { code: existing.Item.code, classId, createdAt: existing.Item.createdAt, status: existing.Item.status };
+  }
+
   const code = newCode();
   const createdAt = now();
   const invite = { PK: invitePk(code), SK: 'PROFILE', entityType: 'INVITE', code, classId, teacherId, createdAt, status: 'ACTIVE' };
-  await client.send(new PutCommand({ TableName: tableName(), Item: invite, ConditionExpression: 'attribute_not_exists(PK)' }));
-  return { code, classId, createdAt, status: 'ACTIVE' };
+  try {
+    await client.send(new TransactWriteCommand({
+      TransactItems: [
+        {
+          Update: {
+            TableName: tableName(),
+            Key: { PK: classPk(classId), SK: 'PROFILE' },
+            UpdateExpression: 'SET inviteCode = :code',
+            ConditionExpression: 'attribute_not_exists(inviteCode)',
+            ExpressionAttributeValues: { ':code': code },
+          },
+        },
+        { Put: { TableName: tableName(), Item: invite, ConditionExpression: 'attribute_not_exists(PK)' } },
+      ],
+    }));
+    return { code, classId, createdAt, status: 'ACTIVE' };
+  } catch (caught) {
+    if (caught?.name !== 'TransactionCanceledException') throw caught;
+    const latest = await client.send(new GetCommand({ TableName: tableName(), Key: { PK: classPk(classId), SK: 'PROFILE' } }));
+    if (!latest.Item?.inviteCode) throw caught;
+    const existing = await client.send(new GetCommand({ TableName: tableName(), Key: { PK: invitePk(latest.Item.inviteCode), SK: 'PROFILE' } }));
+    if (!existing.Item) throw caught;
+    return { code: existing.Item.code, classId, createdAt: existing.Item.createdAt, status: existing.Item.status };
+  }
 };
 
 export const getInvite = async (code) => {
