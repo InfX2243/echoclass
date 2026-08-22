@@ -4,10 +4,17 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}, acc
   if (!apiBaseUrl) throw new Error('VITE_API_BASE_URL is not configured');
   if (!accessToken) throw new Error('No authenticated access token is available');
 
-  console.debug('[EchoClass API] request', { method: options.method ?? 'GET', url: `${apiBaseUrl}${path.startsWith('/') ? path : `/${path}`}`, hasAccessToken: true, tokenLength: accessToken.length });
-  const response = await fetch(`${apiBaseUrl}${path.startsWith('/') ? path : `/${path}`}`, { ...options, headers: { ...(options.body ? { 'content-type': 'application/json' } : {}), ...options.headers, authorization: `Bearer ${accessToken}` } });
+  const headers = new Headers(options.headers);
+  if (options.body && !headers.has('content-type')) headers.set('content-type', 'application/json');
+  headers.set('Authorization', `Bearer ${accessToken}`);
+
+  const url = `${apiBaseUrl}${path.startsWith('/') ? path : `/${path}`}`;
+  console.debug('[EchoClass API] request', { method: options.method ?? 'GET', url, hasAccessToken: true, tokenLength: accessToken.length, authorizationHeaderSet: headers.has('Authorization') });
+
+  const response = await fetch(url, { ...options, headers });
   const raw = await response.text();
   console.debug('[EchoClass API] response', { method: options.method ?? 'GET', path, status: response.status, contentType: response.headers.get('content-type'), bodyLength: raw.length, bodyPreview: raw.slice(0, 300) });
+
   let payload: T | { error?: { code?: string; message?: string } } | null = null;
   if (raw) { try { payload = JSON.parse(raw) as T | { error?: { code?: string; message?: string } }; } catch { payload = null; } }
   if (!response.ok) { const apiError = payload as { error?: { code?: string; message?: string } } | null; const detail = apiError?.error?.message ? `: ${apiError.error.message}` : raw ? `: ${raw.slice(0, 300)}` : ''; throw new Error(`API request failed (${response.status})${detail}`); }
