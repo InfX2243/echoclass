@@ -11,6 +11,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { TeacherClassPage } from './pages/TeacherClassPage';
 import { TeacherDashboardPage } from './pages/TeacherDashboardPage';
 import { TeacherLessonsPage } from './pages/TeacherLessonsPage';
+import { TeacherCreateLessonPage } from './pages/TeacherCreateLessonPage';
 import { RoleOnboardingPage } from './pages/RoleOnboardingPage';
 import { PlaceholderPage } from './PlaceholderPage';
 import { ProtectedRoute, RoleRoute } from './auth/ProtectedRoute';
@@ -19,32 +20,15 @@ export const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
   { path: '/login', element: <AuthPage mode="login" /> },
   { path: '/register', element: <AuthPage mode="register" /> },
-  {
-    element: <ProtectedRoute />,
-    children: [
-      { path: '/onboarding', element: <RoleOnboardingPage /> },
-      {
-        element: <RoleRoute roles={['STUDENT']} />,
-        children: [
-          { path: '/dashboard', element: <DashboardPage /> },
-          { path: '/classes', element: <ClassesPage /> },
-          { path: '/classes/:classId', element: <ClassDetailPage /> },
-          { path: '/lessons/:lessonId', element: <LessonPage /> },
-          { path: '/echoes', element: <EchoesPage /> },
-          { path: '/revisits', element: <RevisitsPage /> },
-        ],
-      },
-      {
-        element: <RoleRoute roles={['TEACHER']} />,
-        children: [
-          { path: '/teacher/dashboard', element: <TeacherDashboardPage /> },
-          { path: '/teacher/classes/:classId', element: <TeacherClassPage /> },
-          { path: '/teacher/classes/:classId/lessons', element: <TeacherLessonsPage /> },
-        ],
-      },
-      { path: '/settings', element: <SettingsPage /> },
-      { path: '/profile', element: <PlaceholderPage title="Profile" /> },
-    ],
-  },
+  { element: <ProtectedRoute />, children: [
+    { path: '/onboarding', element: <RoleOnboardingPage /> },
+    { element: <RoleRoute roles={['STUDENT']} />, children: [
+      { path: '/dashboard', element: <DashboardPage /> }, { path: '/classes', element: <ClassesPage /> }, { path: '/classes/:classId', element: <ClassDetailPage /> }, { path: '/lessons/:lessonId', element: <LessonPage /> }, { path: '/echoes', element: <EchoesPage /> }, { path: '/revisits', element: <RevisitsPage /> },
+    ] },
+    { element: <RoleRoute roles={['TEACHER']} />, children: [
+      { path: '/teacher/dashboard', element: <TeacherDashboardPage /> }, { path: '/teacher/classes/:classId', element: <TeacherClassPage /> }, { path: '/teacher/classes/:classId/lessons', element: <TeacherLessonsPage /> }, { path: '/teacher/classes/:classId/lessons/new', element: <TeacherCreateLessonPage /> },
+    ] },
+    { path: '/settings', element: <SettingsPage /> }, { path: '/profile', element: <PlaceholderPage title="Profile" /> },
+  ] },
   { path: '*', element: <PlaceholderPage title="Page Not Found" /> },
 ]);
