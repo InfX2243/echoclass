@@ -9,8 +9,15 @@ const request = async <T>(path: string): Promise<T> => {
   return apiRequest<T>(path, undefined, accessToken);
 };
 
+interface LessonResponse {
+  lesson: Lesson;
+}
+
 export const lessonApiClient: LessonApiClient = {
-  getLesson: (lessonId): Promise<Lesson> => request(`/api/lessons/${lessonId}`),
+  getLesson: async (lessonId): Promise<Lesson> => {
+    const response = await request<LessonResponse>(`/api/lessons/${lessonId}`);
+    return response.lesson;
+  },
   getPlaybackAccess: (lessonId): Promise<LessonPlaybackAccess> =>
     request(`/api/lessons/${lessonId}/playback`),
   getTimelineContext: (lessonId): Promise<LessonTimelineContext> =>
