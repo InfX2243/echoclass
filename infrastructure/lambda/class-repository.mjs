@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, TransactWriteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
 const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const now = () => new Date().toISOString();
@@ -8,26 +8,40 @@ const tableName = () => process.env.TABLE_NAME;
 const classPk = (classId) => `CLASS#${classId}`;
 const teacherPk = (userId) => `TEACHER#${userId}`;
 const membershipPk = (userId) => `STUDENT#${userId}`;
+const invitePk = (code) => `INVITE#${code}`;
+const newInviteCode = () => randomBytes(6).toString('base64url').toUpperCase();
 
-const cleanClass = (item) => ({
+const cleanClass = (item, includeInviteCode = false) => ({
   id: item.classId,
   name: item.name,
   description: item.description ?? null,
   teacherId: item.teacherId,
   createdAt: item.createdAt,
   updatedAt: item.updatedAt,
+  ...(includeInviteCode ? { inviteCode: item.inviteCode ?? null } : {}),
 });
 
 export const createClass = async ({ teacherId, name, description }) => {
   const createdAt = now();
   const classId = randomUUID();
-  const item = {
+  const inviteCode = newInviteCode();
+  const classItem = {
     PK: classPk(classId), SK: 'PROFILE', entityType: 'CLASS', classId,
     name, description: description || undefined, teacherId, createdAt, updatedAt: createdAt,
+    inviteCode,
     GSI1PK: teacherPk(teacherId), GSI1SK: `CLASS#${createdAt}#${classId}`,
   };
-  await client.send(new PutCommand({ TableName: tableName(), Item: item, ConditionExpression: 'attribute_not_exists(PK)' }));
-  return cleanClass(item);
+  const inviteItem = {
+    PK: invitePk(inviteCode), SK: 'PROFILE', entityType: 'INVITE', code: inviteCode,
+    classId, teacherId, createdAt, status: 'ACTIVE',
+  };
+  await client.send(new TransactWriteCommand({
+    TransactItems: [
+      { Put: { TableName: tableName(), Item: classItem, ConditionExpression: 'attribute_not_exists(PK)' } },
+      { Put: { TableName: tableName(), Item: inviteItem, ConditionExpression: 'attribute_not_exists(PK)' } },
+    ],
+  }));
+  return cleanClass(classItem);
 };
 
 export const listClassesOwnedByTeacher = async (teacherId) => {
@@ -45,8 +59,8 @@ export const getClassById = async (classId) => {
 };
 
 export const getClassForTeacher = async (classId, teacherId) => {
-  const item = await getClassById(classId);
-  return item?.teacherId === teacherId ? item : null;
+  const result = await client.send(new GetCommand({ TableName: tableName(), Key: { PK: classPk(classId), SK: 'PROFILE' } }));
+  return result.Item?.teacherId === teacherId ? cleanClass(result.Item, true) : null;
 };
 
 export const updateClass = async ({ classId, teacherId, name, description }) => {
@@ -63,7 +77,7 @@ export const updateClass = async ({ classId, teacherId, name, description }) => 
     UpdateExpression: `SET ${updates.join(', ')}`, ExpressionAttributeNames: Object.keys(names).length ? names : undefined,
     ExpressionAttributeValues: values, ReturnValues: 'ALL_NEW',
   }));
-  return cleanClass(result.Attributes);
+  return cleanClass(result.Attributes, true);
 };
 
 export const listClassesForStudent = async (studentId) => {
