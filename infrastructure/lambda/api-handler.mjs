@@ -5,7 +5,9 @@ import { createInvite, joinWithInvite, listMembers, removeMembership, teacherOwn
 import { createLesson, getLessonById, getLessonForTeacher, listLessonsForClass, ownsLesson, setLessonStatus, updateLesson } from './lesson-repository.mjs';
 
 const log = (message, details = {}) => console.log(JSON.stringify({ scope: 'api', message, ...details }));
-const json = (statusCode, body) => ({ statusCode, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+const corsHeaders = { 'access-control-allow-origin': 'http://localhost:5173', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS', 'access-control-allow-headers': 'content-type,authorization' };
+const json = (statusCode, body) => ({ statusCode, headers: { ...corsHeaders, 'content-type': 'application/json' }, body: JSON.stringify(body) });
+const preflight = () => ({ statusCode: 204, headers: corsHeaders, body: '' });
 const error = (statusCode, code, message) => Object.assign(new Error(message), { statusCode, code });
 const parseBody = (event) => { if (!event.body) return {}; try { return typeof event.body === 'string' ? JSON.parse(event.body) : event.body; } catch { throw error(400, 'INVALID_JSON', 'Request body must be valid JSON'); } };
 const requireText = (value, field, { min = 1, max = 200 } = {}) => { if (typeof value !== 'string' || value.trim().length < min || value.trim().length > max) throw error(400, 'VALIDATION_ERROR', `${field} must be between ${min} and ${max} characters`); return value.trim(); };
@@ -24,6 +26,7 @@ export const handler = async (event) => {
   const path = normalizePath(rawPath);
   const authorization = getHeader(event.headers, 'authorization');
   log('request received', { method, rawPath, normalizedPath: path, eventVersion: event.version, hasBody: Boolean(event.body), bodyLength: typeof event.body === 'string' ? event.body.length : undefined, headerKeys: Object.keys(event.headers ?? {}).sort(), hasAuthorizationHeader: Boolean(authorization), authorizationScheme: authorization?.split(/\s+/)[0] });
+  if (method === 'OPTIONS') { log('returning CORS preflight response', { rawPath, requestedMethod: getHeader(event.headers, 'access-control-request-method'), requestedHeaders: getHeader(event.headers, 'access-control-request-headers') }); return preflight(); }
   if (method === 'GET' && path === '/health') return json(200, { status: 'ok' });
   try {
     log('verifying bearer token');
