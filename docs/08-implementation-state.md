@@ -1,71 +1,90 @@
 # EchoClass — Implementation State
 
-> This document is the execution ledger for `docs/07-implementation-plan.md`.
+> **Authoritative snapshot:** August 29, 2026 — `feat/echo-mvp`.
 
 ## Status Legend
-- [ ] NOT STARTED
-- [~] IN PROGRESS
 - [x] DONE
+- [~] IN PROGRESS
+- [ ] NOT STARTED
 - [!] BLOCKED
 
-## Current Milestone
+## Current milestone
 
-**Current phase:** Phase 16 — Student Lesson Experience
+**Echo MVP is complete and verified.**
 
-**Documented exception:** Account controls and settings were added as an explicit product-quality slice in `docs/10-account-settings-plan.md` before continuing Phase 16. This addresses an existing shell/auth gap without introducing backend contracts.
+The next implementation milestone is **production-style frontend deployment through CloudFront**, so the application has a stable public URL suitable for submission.
 
-## Completed Foundation / Product Work
+## Completed product and backend
 
-### Phase 12 — Frontend Foundation
-- [x] EC-120 — Frontend application foundation established.
-- [x] EC-121 — Application providers established.
-- [x] EC-121A — Theme system implemented and visually aligned with the visual prototype.
-- [~] EC-122 — Shared API client: foundation exists, but the full planned contract/error/auth behavior is not yet complete.
-- [~] EC-123 — Shared application shell: routing/navigation foundation exists; account controls and settings slice added.
-- [ ] EC-124 — Global loading/empty/error/unauthorized/not-found states.
+### Authentication and identity
+- [x] Cognito authentication boundary.
+- [x] Access-token verification in Lambda.
+- [x] Application-user bootstrap.
+- [x] Teacher/student role-aware authorization.
 
-### Phase 13 — Authentication Frontend
-- [~] EC-130 — Authentication page/flow foundation exists; verify against the full sign-up requirements before marking done.
-- [ ] EC-131 — Verify-email page.
-- [~] EC-132 — Sign-in flow foundation exists; demo session state added for shell controls.
-- [~] EC-133 — Logout foundation added for development-only demo sessions; production logout remains dependent on real auth.
-- [ ] EC-134 — Authenticated `/me` bootstrap.
+### Classes and memberships
+- [x] Class creation and management.
+- [x] Stable invite-code generation.
+- [x] Student join flow.
+- [x] Membership listing and management.
 
-### Phase 14 — Class Frontend
-- [x] EC-140 through EC-144 — Existing class UI foundations implemented.
-- [ ] EC-145 — Student management page.
+### Lessons and media
+- [x] Lesson creation, editing, and lifecycle.
+- [x] Private S3 media storage.
+- [x] Direct multipart browser-to-S3 upload.
+- [x] Student-authorized playback.
+- [x] Playback position preserved when switching browser tabs.
 
-### Phase 15 — Lesson Management Frontend
-- [x] EC-150 and EC-151 — Teacher lesson management list and route implemented.
-- [ ] EC-152 through EC-154 — Remaining lesson management work.
+### Echo MVP
+- [x] Create Echo.
+- [x] List Echoes.
+- [x] Update Echo.
+- [x] Delete Echo.
+- [x] Lesson-scoped Echo API routing.
+- [x] DynamoDB persistence.
+- [x] CloudWatch diagnostic logging for Echo failures.
+- [x] Echo creation timestamp validation corrected.
+- [x] Echo creation `createdAt`/`updatedAt` initialization corrected.
+- [x] End-to-end Echo persistence verified.
 
-## Current Development Position
+## AWS foundation
 
-### Phase 16 — Student Lesson Experience
-- [ ] EC-160 — Authorized lesson loader.
-- [ ] EC-161 — HTML5 video player.
-- [ ] EC-162 — Timestamp URL state.
-- [ ] EC-163 — Echo reaction bar.
-- [ ] EC-164 — Echo composer.
-- [ ] EC-165 — Echo edit/delete.
+- [x] DynamoDB application table.
+- [x] Private S3 media bucket.
+- [x] API Gateway HTTP API.
+- [x] Application Lambda.
+- [x] Dedicated Echo Lambda.
+- [x] Cognito User Pool integration.
+- [x] CloudFront distribution for private media delivery via OAC.
 
-## Account Controls and Settings Exception
-- [x] Dedicated account/settings scope documented in `docs/10-account-settings-plan.md`.
-- [x] Shared top-bar avatar/account menu implemented.
-- [x] Development demo-session logout implemented.
-- [x] Settings route implemented.
-- [x] Light, dark, and system preferences exposed through the existing persisted theme provider.
+## Next milestone — Public web application deployment
 
-## Execution Rules
-1. Docs first: update or verify relevant requirements before implementation.
-2. Small slices: implement one coherent feature slice per PR.
-3. Build safety: run applicable lint, typecheck, test, format-check, and build commands before merge where runtime access is available.
-4. No premature backend coupling: explicit typed fixtures are acceptable; undocumented API contracts are not.
-5. State accuracy: only mark work done when its documented completion condition is satisfied.
+### Phase 17 — Frontend CloudFront Hosting
+- [ ] Build production Vite bundle.
+- [ ] Provision a private S3 origin for static web assets.
+- [ ] Provision CloudFront distribution for the React application.
+- [ ] Configure SPA routing fallback to `index.html`.
+- [ ] Configure production environment variables/API base URL.
+- [ ] Configure CloudFront cache behavior and HTTPS.
+- [ ] Deploy the web bundle.
+- [ ] Verify Cognito authentication from the deployed origin.
+- [ ] Verify API Gateway, video playback, and Echo CRUD from the deployed URL.
+- [ ] Produce the final submission URL.
 
+## Definition of done for the next milestone
 
-## Echoes and Playback Reliability Fix — 2026-08-29
-- [x] Echo creation route aligned with the lesson-scoped backend contract.
-- [x] Lesson Echo query behavior stabilized.
-- [x] Window-focus refetch disabled for authorized lesson playback to prevent video source replacement and restart.
-- [x] Investigation and verification checklist documented in `docs/20-echoes-and-playback-focus-fix.md`.
+The application is considered deployed when a user can open one HTTPS CloudFront URL and successfully:
+
+1. sign in;
+2. create or access a class;
+3. access a lesson;
+4. play authorized media;
+5. create and persist an Echo;
+6. reload and retrieve that Echo.
+
+## Documentation status
+
+- [x] Current Echo MVP investigation and fixes documented.
+- [x] Implementation state reconciled with the working branch.
+- [x] Remaining roadmap updated to prioritize public deployment.
+- [x] Deployment architecture documented as the next implementation slice.
