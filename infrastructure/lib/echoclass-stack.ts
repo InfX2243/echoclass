@@ -144,10 +144,7 @@ export class EchoClassStack extends cdk.Stack {
             queryString: false,
             cookies: { forward: 'none' },
           },
-          trustedKeyGroups: {
-            enabled: true,
-            items: [mediaKeyGroup.ref],
-          },
+          trustedKeyGroups: [mediaKeyGroup.ref],
         },
         restrictions: { geoRestriction: { restrictionType: 'none' } },
         viewerCertificate: { cloudFrontDefaultCertificate: true },
