@@ -46,7 +46,7 @@ const createCannedPolicySignature = ({ url, expiresAt, privateKey }) => {
   return toCloudFrontBase64(signer.sign(privateKey));
 };
 
-export const createLessonPlaybackAccess = async ({ objectKey, expiresIn = 900 }) => {
+export const createLessonPlaybackAccess = async ({ objectKey, expiresIn = 3600 }) => {
   const secret = await getSigningSecret();
   const expiresAtEpoch = Math.floor(Date.now() / 1000) + expiresIn;
   const url = `https://${distributionDomain()}/${objectKey.split('/').map(encodeURIComponent).join('/')}`;
