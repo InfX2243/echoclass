@@ -13,7 +13,7 @@ export const createEcho = async ({ studentUserId, lessonId, timestampSeconds, ty
   const createdAt = now();
   const echoId = randomUUID();
   const item = { entityType: 'ECHO', echoId, id: echoId, studentUserId, lessonId, timestampSeconds, type, note: note || null, createdAt, updatedAt };
-  await client.send(new PutCommand({ TableName: tableName(), Item: { PK: lessonPk(lessonId), SK: `ECHO#${createdAt}#${echoId}`, GSI1PK: studentPk(studentUserId), GSI1SK: `ECHO#${createdAt}#${echoId}`, ...item }, ConditionExpression: 'attribute_not_exists(PK) AND attribute_not_exists(SK)' }));
+  const params = { TableName: tableName(), Item: { PK: lessonPk(lessonId), SK: `ECHO#${createdAt}#${echoId}`, GSI1PK: studentPk(studentUserId), GSI1SK: `ECHO#${createdAt}#${echoId}`, ...item }, ConditionExpression: 'attribute_not_exists(PK) AND attribute_not_exists(SK)' }; console.log(JSON.stringify({ scope: 'echo-repository', event: 'dynamodb-put-start', tableName: params.TableName, PK: params.Item.PK, SK: params.Item.SK, GSI1PK: params.Item.GSI1PK })); try { const result = await client.send(new PutCommand(params)); console.log(JSON.stringify({ scope: 'echo-repository', event: 'dynamodb-put-success', tableName: params.TableName, metadata: result?.$metadata })); } catch (e) { console.error(JSON.stringify({ scope: 'echo-repository', event: 'dynamodb-put-failed', tableName: params.TableName, name: e?.name, message: e?.message, code: e?.code, stack: e?.stack, metadata: e?.$metadata })); throw e; }
   return clean(item);
 };
 
