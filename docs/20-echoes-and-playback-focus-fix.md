@@ -194,3 +194,27 @@ This preserves protection against invalid timestamps while allowing the actual H
 ### Final POST Flow
 
 `POST /api/lessons/{lessonId}/echoes` → API Gateway → Echo Lambda → token/access validation → timestamp validation → DynamoDB `PutCommand` → **201 Created**.
+
+
+## CloudWatch Diagnostic Instrumentation for Remaining 500
+
+The Echo POST handler now emits a request ID and stage-by-stage structured JSON logs for:
+
+1. request arrival and route;
+2. token verification;
+3. user resolution and role;
+4. lesson authorization;
+5. Echo payload validation;
+6. DynamoDB `PutCommand` start, including table name and generated keys;
+7. DynamoDB success metadata;
+8. the exact AWS SDK error name, message, code, stack, and request metadata on failure.
+
+The DynamoDB write is also wrapped independently, so CloudWatch will clearly distinguish an authorization/lesson failure from a `PutCommand` failure.
+
+### What to send after deployment
+
+Open the Lambda log group:
+
+`/aws/lambda/EchoClass-dev-echo-api`
+
+Filter around the failing request and send the JSON entry with `event: "dynamodb-put-failed"` or `event: "request-failed"`. That entry will contain the exact AWS error instead of only the browser's HTTP 500.
