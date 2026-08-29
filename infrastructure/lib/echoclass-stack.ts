@@ -11,6 +11,7 @@ import {
   aws_logs as logs,
   aws_s3 as s3,
   aws_s3_deployment as s3deploy,
+  aws_secretsmanager as secretsmanager,
 } from 'aws-cdk-lib';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { Construct } from 'constructs';
@@ -29,6 +30,16 @@ export class EchoClassStack extends cdk.Stack {
     const webDistPath = path.resolve(import.meta.dirname, '../../apps/web/dist');
     const webOrigin =
       this.node.tryGetContext('webOrigin') ?? process.env.ECHOCLASS_WEB_ORIGIN ?? 'http://localhost:5173';
+    const mediaPublicKey =
+      this.node.tryGetContext('mediaPublicKey') ?? process.env.ECHOCLASS_MEDIA_PUBLIC_KEY;
+    const mediaSigningSecretArn =
+      this.node.tryGetContext('mediaSigningSecretArn') ?? process.env.ECHOCLASS_MEDIA_SIGNING_SECRET_ARN;
+
+    if (!mediaPublicKey || !mediaSigningSecretArn) {
+      throw new Error(
+        'CloudFront media signing is required. Set ECHOCLASS_MEDIA_PUBLIC_KEY to the PEM public key and ECHOCLASS_MEDIA_SIGNING_SECRET_ARN to the Secrets Manager ARN containing {"privateKey":"..."}.',
+      );
+    }
 
     this.templateOptions.metadata = { Environment: environmentName, Project: 'EchoClass' };
 
@@ -91,6 +102,24 @@ export class EchoClassStack extends cdk.Stack {
       },
     });
 
+    const mediaPublicKeyResource = new cloudfront.CfnPublicKey(this, 'MediaPublicKey', {
+      publicKeyConfig: {
+        callerReference: `EchoClass-${environmentName}-MediaSigner`,
+        name: `EchoClass-${environmentName}-MediaSigner`,
+        encodedKey: mediaPublicKey,
+        comment: 'Public key used to verify EchoClass private media signed URLs',
+      },
+    });
+
+    const mediaKeyGroup = new cloudfront.CfnKeyGroup(this, 'MediaKeyGroup', {
+      keyGroupConfig: {
+        name: `EchoClass-${environmentName}-MediaKeyGroup`,
+        comment: 'Trusted signer group for EchoClass private lesson media',
+        items: [mediaPublicKeyResource.ref],
+      },
+    });
+    mediaKeyGroup.addDependency(mediaPublicKeyResource);
+
     const mediaDistribution = new cloudfront.CfnDistribution(this, 'MediaDistribution', {
       distributionConfig: {
         enabled: true,
@@ -110,13 +139,23 @@ export class EchoClassStack extends cdk.Stack {
           viewerProtocolPolicy: 'redirect-to-https',
           allowedMethods: ['GET', 'HEAD'],
           cachedMethods: ['GET', 'HEAD'],
-          compress: true,
-          forwardedValues: { queryString: true, cookies: { forward: 'none' } },
+          compress: false,
+          forwardedValues: {
+            queryString: false,
+            cookies: { forward: 'none' },
+          },
+          trustedKeyGroups: {
+            enabled: true,
+            items: [mediaKeyGroup.ref],
+          },
         },
         restrictions: { geoRestriction: { restrictionType: 'none' } },
         viewerCertificate: { cloudFrontDefaultCertificate: true },
       },
     });
+    mediaDistribution.addDependency(mediaKeyGroup);
+    mediaDistribution.addDependency(mediaOriginAccessControl);
+
     mediaBucket.addToResourcePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -129,6 +168,12 @@ export class EchoClassStack extends cdk.Stack {
           },
         },
       }),
+    );
+
+    const mediaSigningSecret = secretsmanager.Secret.fromSecretCompleteArn(
+      this,
+      'MediaSigningSecret',
+      mediaSigningSecretArn,
     );
 
     const webBucket = new s3.Bucket(this, 'WebBucket', {
@@ -199,6 +244,8 @@ export class EchoClassStack extends cdk.Stack {
         TABLE_NAME: applicationTable.tableName,
         MEDIA_BUCKET_NAME: mediaBucket.bucketName,
         MEDIA_DISTRIBUTION_DOMAIN: mediaDistribution.attrDomainName,
+        MEDIA_SIGNING_SECRET_ARN: mediaSigningSecret.secretArn,
+        MEDIA_SIGNING_KEY_PAIR_ID: mediaPublicKeyResource.ref,
         COGNITO_REGION: 'ap-southeast-2',
         COGNITO_USER_POOL_ID: 'ap-southeast-2_pIm3nrBSz',
         COGNITO_APP_CLIENT_ID: '7e0e0adbob78cmgb05ots0pl8k',
@@ -207,6 +254,7 @@ export class EchoClassStack extends cdk.Stack {
     });
     applicationTable.grantReadWriteData(apiHandler);
     mediaBucket.grantReadWrite(apiHandler);
+    mediaSigningSecret.grantRead(apiHandler);
 
     const echoLogGroup = new logs.LogGroup(this, 'EchoApiLogGroup', {
       logGroupName: `/aws/lambda/EchoClass-${environmentName}-echo-api`,
@@ -251,51 +299,24 @@ export class EchoClassStack extends cdk.Stack {
     });
 
     const echoIntegration = new HttpLambdaIntegration('EchoIntegration', echoHandler);
-    httpApi.addRoutes({
-      path: '/echoes',
-      methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST],
-      integration: echoIntegration,
-    });
-    httpApi.addRoutes({
-      path: '/lessons/{lessonId}/echoes',
-      methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST],
-      integration: echoIntegration,
-    });
-    httpApi.addRoutes({
-      path: '/lessons/{lessonId}/echoes/{echoId}',
-      methods: [apigatewayv2.HttpMethod.PATCH, apigatewayv2.HttpMethod.DELETE],
-      integration: echoIntegration,
-    });
-    httpApi.addRoutes({
-      path: '/api/echoes',
-      methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST],
-      integration: echoIntegration,
-    });
-    httpApi.addRoutes({
-      path: '/api/lessons/{lessonId}/echoes',
-      methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST],
-      integration: echoIntegration,
-    });
-    httpApi.addRoutes({
-      path: '/api/lessons/{lessonId}/echoes/{echoId}',
-      methods: [apigatewayv2.HttpMethod.PATCH, apigatewayv2.HttpMethod.DELETE],
-      integration: echoIntegration,
-    });
-    httpApi.addRoutes({
-      path: '/api/v1/echoes',
-      methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST],
-      integration: echoIntegration,
-    });
-    httpApi.addRoutes({
-      path: '/api/v1/lessons/{lessonId}/echoes',
-      methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST],
-      integration: echoIntegration,
-    });
-    httpApi.addRoutes({
-      path: '/api/v1/lessons/{lessonId}/echoes/{echoId}',
-      methods: [apigatewayv2.HttpMethod.PATCH, apigatewayv2.HttpMethod.DELETE],
-      integration: echoIntegration,
-    });
+    for (const prefix of ['', '/api', '/api/v1']) {
+      httpApi.addRoutes({
+        path: `${prefix}/echoes`,
+        methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST],
+        integration: echoIntegration,
+      });
+      httpApi.addRoutes({
+        path: `${prefix}/lessons/{lessonId}/echoes`,
+        methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST],
+        integration: echoIntegration,
+      });
+      httpApi.addRoutes({
+        path: `${prefix}/lessons/{lessonId}/echoes/{echoId}`,
+        methods: [apigatewayv2.HttpMethod.PATCH, apigatewayv2.HttpMethod.DELETE],
+        integration: echoIntegration,
+      });
+    }
+
     httpApi.addRoutes({
       path: '/{proxy+}',
       methods: [apigatewayv2.HttpMethod.ANY],
@@ -321,6 +342,16 @@ export class EchoClassStack extends cdk.Stack {
       value: mediaDistribution.attrDomainName,
       description: 'EchoClass private media CloudFront domain',
       exportName: `${environmentName}-EchoClass-MediaDomain`,
+    });
+    new cdk.CfnOutput(this, 'MediaKeyGroupId', {
+      value: mediaKeyGroup.ref,
+      description: 'CloudFront trusted key group for private media',
+      exportName: `${environmentName}-EchoClass-MediaKeyGroupId`,
+    });
+    new cdk.CfnOutput(this, 'MediaPublicKeyId', {
+      value: mediaPublicKeyResource.ref,
+      description: 'CloudFront public key ID for private media',
+      exportName: `${environmentName}-EchoClass-MediaPublicKeyId`,
     });
     new cdk.CfnOutput(this, 'WebBucketName', {
       value: webBucket.bucketName,
