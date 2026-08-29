@@ -62,7 +62,7 @@ The secret value must be JSON:
 }
 ```
 
-The API uses the CloudFront canned signed-URL policy with a short default lifetime of 15 minutes.
+The API uses the CloudFront canned signed-URL policy with a default lifetime of **1 hour** so normal lesson sessions and range requests can continue without requiring a mid-lesson authorization refresh.
 
 The browser therefore receives a URL shaped like:
 
