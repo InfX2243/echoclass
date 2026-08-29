@@ -1,98 +1,86 @@
 # EchoClass — Remaining Implementation Roadmap
 
-> **Current snapshot:** August 29, 2026. The Echo MVP on `feat/echo-mvp` is complete.
+> **Current snapshot:** August 30, 2026 — `feat/cloudfront-web-deployment`.
 
 ## Current position
 
-The core MVP now supports:
+The EchoClass MVP now supports:
 
 - Cognito authentication and server-side identity.
 - Teacher/student authorization.
 - Classes, memberships, and stable invite codes.
 - Lesson lifecycle management.
 - Private S3 video uploads.
-- Authorized lesson playback.
+- Student-authorized lesson playback.
 - Timestamped Echo CRUD backed by DynamoDB.
 - Playback continuity across browser tab changes.
-- CloudFront private-media infrastructure.
+- Private media CloudFront infrastructure.
+- Signed CloudFront playback URLs with short-lived viewer authorization.
+- CloudFront-cached media delivery while S3 remains private.
+- Public React/Vite web delivery through a separate CloudFront distribution.
 
-The immediate priority is no longer another product feature.
-
-# Priority 1 — Deploy the web application
-
-The submission requires a publicly accessible application URL.
-
-## Target architecture
+## Completed deployment path
 
 ```mermaid
 flowchart LR
-  U[User Browser] --> CF[CloudFront
-Public HTTPS URL]
-  CF --> S3WEB[(Private S3
-React/Vite build)]
-  U --> COG[Cognito]
-  U --> API[API Gateway]
-  API --> L[Lambda]
-  L --> DB[(DynamoDB)]
-  U -->|Authorized playback| MEDIA[Media CloudFront]
-  MEDIA --> S3MEDIA[(Private Media S3)]
+  Browser[User Browser]
+  WebCF[Web CloudFront]
+  WebS3[(Private Web S3)]
+  API[API Gateway]
+  Lambda[Application Lambda]
+  DB[(DynamoDB)]
+  MediaCF[Media CloudFront]
+  MediaS3[(Private Media S3)]
+  KeyGroup[CloudFront Key Group]
+
+  Browser --> WebCF
+  WebCF --> WebS3
+  Browser --> API
+  API --> Lambda
+  Lambda --> DB
+  Lambda -->|Signed playback URL| Browser
+  Browser --> MediaCF
+  MediaCF --> KeyGroup
+  MediaCF --> MediaS3
 ```
 
-## Deployment flow
+## Media-delivery implementation completed
 
-```mermaid
-sequenceDiagram
-  participant Dev as Developer/CI
-  participant Build as Vite Build
-  participant S3 as Web Assets S3
-  participant CF as CloudFront
-  participant User as Browser
+The previous direct-S3 playback path has been replaced with:
 
-  Dev->>Build: pnpm --filter web build
-  Build-->>Dev: dist/
-  Dev->>S3: Upload immutable assets
-  Dev->>CF: Invalidate/index deployment
-  User->>CF: HTTPS request
-  CF->>S3: Fetch static assets
-  CF-->>User: EchoClass SPA
-```
+1. Student requests `/lessons/{lessonId}/playback` with a Cognito access token.
+2. Lambda verifies the user, lesson state, and class membership.
+3. Lambda reads the private CloudFront signing key from Secrets Manager.
+4. Lambda creates a short-lived signed CloudFront URL.
+5. Browser requests the video from CloudFront.
+6. CloudFront validates the signed URL and serves the object from cache or private S3 through OAC.
 
-## Required implementation work
+The media distribution does not forward signed URL query parameters to S3, so signatures do not become part of the origin request/cache key.
 
-1. Create a dedicated private S3 bucket for the frontend.
-2. Create CloudFront OAC and distribution.
-3. Configure default root object and SPA fallback/error behavior.
-4. Configure cache policies:
-   - immutable hashed assets cached aggressively;
-   - `index.html` short/no-cache.
-5. Provide production frontend environment configuration.
-6. Ensure API Gateway CORS allows the deployed CloudFront origin.
-7. Ensure Cognito app-client callback/sign-out URLs allow the deployed origin.
-8. Deploy and smoke-test the complete MVP.
-9. Record the final CloudFront URL in the README/deployment documentation.
+## Remaining operational acceptance
 
-## Acceptance checklist
+- [ ] Provision the RSA media signing key pair.
+- [ ] Store the private key in AWS Secrets Manager.
+- [ ] Deploy the stack with `ECHOCLASS_MEDIA_PUBLIC_KEY` and `ECHOCLASS_MEDIA_SIGNING_SECRET_ARN`.
+- [ ] Verify the playback endpoint returns the CloudFront domain.
+- [ ] Verify video playback and seeking through CloudFront.
+- [ ] Verify expired signed URLs are rejected.
+- [ ] Verify direct S3 object access remains denied.
+- [ ] Verify a second authorized playback request can use a CloudFront cache hit.
 
-- [ ] Public HTTPS URL loads the React app.
-- [ ] Refreshing a nested route works.
-- [ ] Cognito login works.
-- [ ] API calls work from CloudFront origin.
-- [ ] Video playback works.
-- [ ] Echo CRUD works and persists.
-- [ ] No browser secrets/AWS credentials are exposed.
+## Next engineering priority — Production hardening
 
-# Priority 2 — Production hardening
-
-After the submission deployment:
+After the submission path is verified:
 
 - automated frontend tests for critical lesson/Echo flows;
 - backend tests for authorization and ownership;
 - CI for lint, typecheck, tests, build, and CDK synth;
 - CloudWatch alarms and operational dashboards;
 - custom domain and ACM certificate if required;
-- separate staging/production configuration.
+- separate staging/production configuration;
+- signing-key rotation procedure and operational runbook.
 
-# Future product roadmap
+## Future product roadmap
 
 ```mermaid
 flowchart LR
@@ -110,6 +98,6 @@ Potential future work:
 - notifications;
 - broader test coverage.
 
-## Recommended next branch
+## Branch
 
 `feat/cloudfront-web-deployment`
