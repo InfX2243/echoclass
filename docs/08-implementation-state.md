@@ -62,3 +62,10 @@
 3. Build safety: run applicable lint, typecheck, test, format-check, and build commands before merge where runtime access is available.
 4. No premature backend coupling: explicit typed fixtures are acceptable; undocumented API contracts are not.
 5. State accuracy: only mark work done when its documented completion condition is satisfied.
+
+
+## Echoes and Playback Reliability Fix — 2026-08-29
+- [x] Echo creation route aligned with the lesson-scoped backend contract.
+- [x] Lesson Echo query behavior stabilized.
+- [x] Window-focus refetch disabled for authorized lesson playback to prevent video source replacement and restart.
+- [x] Investigation and verification checklist documented in `docs/20-echoes-and-playback-focus-fix.md`.
