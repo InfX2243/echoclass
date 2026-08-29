@@ -218,3 +218,25 @@ Open the Lambda log group:
 `/aws/lambda/EchoClass-dev-echo-api`
 
 Filter around the failing request and send the JSON entry with `event: "dynamodb-put-failed"` or `event: "request-failed"`. That entry will contain the exact AWS error instead of only the browser's HTTP 500.
+
+
+## Confirmed CloudWatch Root Cause — `updatedAt` ReferenceError
+
+CloudWatch confirmed the remaining POST failure was a JavaScript runtime bug in `createEcho`:
+
+```text
+ReferenceError: updatedAt is not defined
+```
+
+The repository created `createdAt` but included `updatedAt` in the DynamoDB item before declaring it. The Lambda therefore crashed while constructing the item, before the `PutCommand` started.
+
+### Fix
+
+Echo creation now initializes both timestamps consistently:
+
+```text
+const createdAt = now();
+const updatedAt = createdAt;
+```
+
+The same creation timestamp is used as the initial update timestamp. The DynamoDB write can now proceed to `PutCommand`.
