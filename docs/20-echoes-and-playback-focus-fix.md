@@ -174,3 +174,23 @@ sequenceDiagram
 ```
 
 This is the missing infrastructure connection that prevented Echoes from ever reaching DynamoDB.
+
+
+## Third Investigation — POST Returned 400
+
+After API Gateway routing was corrected, the POST request reached the Echo Lambda but still returned **400**. The validation code derived the lesson duration from `Number(lesson.media?.durationSeconds ?? 0)` and unconditionally required `timestampSeconds <= durationSeconds`.
+
+Current lesson media records do not reliably persist `durationSeconds`. Missing metadata therefore became `0`, which made every Echo created after the first instant of playback invalid.
+
+### Fix
+
+Timestamp validation now distinguishes between a known positive duration and unavailable duration metadata:
+
+- timestamp must always be finite and non-negative;
+- the upper-bound check is enforced only when a valid positive lesson duration is available.
+
+This preserves protection against invalid timestamps while allowing the actual HTML5 video playback timestamp to be persisted for lessons whose media duration metadata has not yet been populated.
+
+### Final POST Flow
+
+`POST /api/lessons/{lessonId}/echoes` → API Gateway → Echo Lambda → token/access validation → timestamp validation → DynamoDB `PutCommand` → **201 Created**.
