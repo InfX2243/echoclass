@@ -12,7 +12,7 @@ const clean = (item) => ({ id: item.echoId, studentUserId: item.studentUserId, l
 export const createEcho = async ({ studentUserId, lessonId, timestampSeconds, type, note }) => {
   const createdAt = now();
   const echoId = randomUUID();
-  const item = { entityType: 'ECHO', echoId, studentUserId, lessonId, timestampSeconds, type, note: note || null, createdAt, updatedAt };
+  const item = { entityType: 'ECHO', echoId, id: echoId, studentUserId, lessonId, timestampSeconds, type, note: note || null, createdAt, updatedAt };
   await client.send(new PutCommand({ TableName: tableName(), Item: { PK: lessonPk(lessonId), SK: `ECHO#${createdAt}#${echoId}`, GSI1PK: studentPk(studentUserId), GSI1SK: `ECHO#${createdAt}#${echoId}`, ...item }, ConditionExpression: 'attribute_not_exists(PK) AND attribute_not_exists(SK)' }));
   return clean(item);
 };
