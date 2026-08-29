@@ -32,9 +32,16 @@ const toCloudFrontBase64 = (value) =>
     .replace(/\//g, '_');
 
 const createCannedPolicySignature = ({ url, expiresAt, privateKey }) => {
-  const payload = `${url}\n${expiresAt}`;
+  const policy = JSON.stringify({
+    Statement: [
+      {
+        Resource: url,
+        Condition: { DateLessThan: { 'AWS:EpochTime': expiresAt } },
+      },
+    ],
+  });
   const signer = createSign('RSA-SHA1');
-  signer.update(payload);
+  signer.update(policy);
   signer.end();
   return toCloudFrontBase64(signer.sign(privateKey));
 };
