@@ -9,5 +9,8 @@ export function useAuthorizedLesson(lessonId: string) {
     queryFn: () => loadAuthorizedLesson(lessonApiClient, lessonId),
     enabled: lessonId.length > 0,
     retry: false,
+    // The authorized lesson response contains a short-lived playback URL. Refetching on
+    // window focus replaces the <video src>, which restarts playback from the beginning.
+    refetchOnWindowFocus: false,
   });
 }
