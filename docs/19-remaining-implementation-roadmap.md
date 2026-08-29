@@ -1,111 +1,115 @@
-# EchoClass — Documentation Status Addendum
+# EchoClass — Remaining Implementation Roadmap
 
-> **Current snapshot:** August 2026 on `feat/echo-mvp`.
+> **Current snapshot:** August 29, 2026. The Echo MVP on `feat/echo-mvp` is complete.
 
-This document reconciles the historical plans in `docs/` with the implementation now present in the repository.
+## Current position
 
-## What is implemented
+The core MVP now supports:
 
-- Cognito authentication and backend access-token verification.
-- Application-user bootstrap and backend-derived identity.
-- Teacher/student role-aware authorization.
-- Classes, memberships, stable invite-code handling, and member management.
-- Lesson creation, updates, publication lifecycle, and student access rules.
-- Private S3 media storage.
-- Direct multipart browser-to-S3 uploads coordinated by Lambda.
-- CloudFront with Origin Access Control.
-- Authorized lesson playback and timeline backend endpoints.
-- Dedicated Echo Lambda with create/list/update/delete persistence.
-- Frontend application shell, account controls, settings, and theme preferences.
+- Cognito authentication and server-side identity.
+- Teacher/student authorization.
+- Classes, memberships, and stable invite codes.
+- Lesson lifecycle management.
+- Private S3 video uploads.
+- Authorized lesson playback.
+- Timestamped Echo CRUD backed by DynamoDB.
+- Playback continuity across browser tab changes.
+- CloudFront private-media infrastructure.
 
-## Documentation interpretation
+The immediate priority is no longer another product feature.
 
-The following documents are primarily **historical planning/design sources** and should not be read as current implementation status:
+# Priority 1 — Deploy the web application
 
-- `01-requirements.md`
-- `02-page-architecture.md`
-- `03-wireframes.md`
-- `04-visual-prototype.md`
-- `05-component-architecture.md`
-- `06-code.md`
-- `07-implementation-plan.md`
-- `09-landing-page-plan.md`
-- `10-account-settings-plan.md`
-- `11-mvp-execution-plan.md`
-- `12-mvp-domain-contracts.md`
+The submission requires a publicly accessible application URL.
 
-Documents `13` through `18` describe infrastructure/backend foundations that have since been expanded into working implementation.
-
-## Remaining implementation roadmap
+## Target architecture
 
 ```mermaid
 flowchart LR
-  A[Student Playback] --> B[Echo UI]
-  B --> C[Timestamp + Timeline]
-  C --> D[Revisit MVP]
-  D --> E[Tests + Production Hardening]
+  U[User Browser] --> CF[CloudFront
+Public HTTPS URL]
+  CF --> S3WEB[(Private S3
+React/Vite build)]
+  U --> COG[Cognito]
+  U --> API[API Gateway]
+  API --> L[Lambda]
+  L --> DB[(DynamoDB)]
+  U -->|Authorized playback| MEDIA[Media CloudFront]
+  MEDIA --> S3MEDIA[(Private Media S3)]
 ```
 
-### 1. Student playback
-Complete and verify the full frontend flow:
-- load real lesson metadata;
-- request authorized playback;
-- configure the HTML5 player;
-- handle loading, denied, expired, and missing-media states.
-
-### 2. Echo UI
-Connect the implemented backend to the student experience:
-- capture player timestamps;
-- create/list/edit/delete Echoes;
-- optional notes and Echo types;
-- ownership-aware controls;
-- selecting an Echo seeks the player.
-
-### 3. Timestamp URLs and timeline
-Recommended URL shape:
-
-```text
-/lessons/<lessonId>?t=<seconds>
-```
-
-Add safe parsing, media-ready seeking, Echo/player synchronization, and accessible timeline markers.
-
-### 4. Revisit MVP
-Define and implement the first Revisit workflow:
+## Deployment flow
 
 ```mermaid
-flowchart LR
-  Echoes[Saved Echoes] --> Select[Select moments]
-  Select --> Queue[Revisit queue]
-  Queue --> Watch[Rewatch]
-  Watch --> Complete[Completion state]
+sequenceDiagram
+  participant Dev as Developer/CI
+  participant Build as Vite Build
+  participant S3 as Web Assets S3
+  participant CF as CloudFront
+  participant User as Browser
+
+  Dev->>Build: pnpm --filter web build
+  Build-->>Dev: dist/
+  Dev->>S3: Upload immutable assets
+  Dev->>CF: Invalidate/index deployment
+  User->>CF: HTTPS request
+  CF->>S3: Fetch static assets
+  CF-->>User: EchoClass SPA
 ```
 
-### 5. Production hardening
-- automated tests for authorization and ownership;
-- frontend tests for critical lesson/Echo flows;
+## Required implementation work
+
+1. Create a dedicated private S3 bucket for the frontend.
+2. Create CloudFront OAC and distribution.
+3. Configure default root object and SPA fallback/error behavior.
+4. Configure cache policies:
+   - immutable hashed assets cached aggressively;
+   - `index.html` short/no-cache.
+5. Provide production frontend environment configuration.
+6. Ensure API Gateway CORS allows the deployed CloudFront origin.
+7. Ensure Cognito app-client callback/sign-out URLs allow the deployed origin.
+8. Deploy and smoke-test the complete MVP.
+9. Record the final CloudFront URL in the README/deployment documentation.
+
+## Acceptance checklist
+
+- [ ] Public HTTPS URL loads the React app.
+- [ ] Refreshing a nested route works.
+- [ ] Cognito login works.
+- [ ] API calls work from CloudFront origin.
+- [ ] Video playback works.
+- [ ] Echo CRUD works and persists.
+- [ ] No browser secrets/AWS credentials are exposed.
+
+# Priority 2 — Production hardening
+
+After the submission deployment:
+
+- automated frontend tests for critical lesson/Echo flows;
+- backend tests for authorization and ownership;
 - CI for lint, typecheck, tests, build, and CDK synth;
-- CloudWatch alarms/operational monitoring;
-- separate production configuration and hosting strategy.
+- CloudWatch alarms and operational dashboards;
+- custom domain and ACM certificate if required;
+- separate staging/production configuration.
 
-## Recommended next development order
+# Future product roadmap
 
-1. `feat/student-playback-integration`
-2. `feat/echo-ui-integration`
-3. `feat/lesson-timestamp-timeline`
-4. `feat/revisit-mvp`
-5. `chore/test-and-production-hardening`
+```mermaid
+flowchart LR
+  A[Deployed MVP] --> B[Timestamp Timeline]
+  B --> C[Revisit Queue]
+  C --> D[Learning Analytics]
+  D --> E[Production Hardening]
+```
 
-## MVP completion checklist
+Potential future work:
 
-- [x] Cognito and server-side identity.
-- [x] Classes, memberships, and stable invites.
-- [x] Lesson lifecycle.
-- [x] Direct private video upload.
-- [x] CloudFront private-media foundation.
-- [x] Echo backend CRUD.
-- [ ] Student private playback verified end-to-end in the UI.
-- [ ] Complete Echo UI CRUD and player integration.
-- [ ] Timestamp/timeline navigation.
-- [ ] Critical loading/error/empty states.
-- [ ] Automated critical-path tests.
+- richer timeline navigation and Echo markers;
+- Revisit MVP based on saved Echoes;
+- learning progress and analytics;
+- notifications;
+- broader test coverage.
+
+## Recommended next branch
+
+`feat/cloudfront-web-deployment`
