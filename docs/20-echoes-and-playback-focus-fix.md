@@ -124,3 +124,53 @@ sequenceDiagram
 ## Follow-up
 
 The current playback implementation uses short-lived S3 presigned URLs. The infrastructure already contains a private CloudFront distribution, and a future media-delivery slice should complete the migration to CloudFront-based playback. That work is separate from this focus-reset fix.
+
+
+## Second Investigation — Actual Production Failure
+
+The previous frontend route correction was not sufficient because the actual failure was at **API Gateway route matching**, before the Echo Lambda could execute.
+
+The React client calls Echo endpoints with the same prefix used by the rest of the application:
+
+```text
+/api/echoes
+/api/lessons/{lessonId}/echoes
+```
+
+However, the CDK stack had registered the Echo Lambda only on unprefixed API Gateway routes:
+
+```text
+/echoes
+/lessons/{lessonId}/echoes
+```
+
+Because API Gateway route matching happens before Lambda invocation, requests such as `POST /api/lessons/{lessonId}/echoes` did not reach `echo-handler.mjs` at all. Therefore `createEcho()` never executed and no DynamoDB item could be created. This also explains why the DynamoDB table remained empty.
+
+### Infrastructure Fix
+
+The stack now registers Echo routes for the prefixes supported by the application handler and frontend contract:
+
+- `/api/...`
+- `/api/v1/...`
+- legacy unprefixed routes
+
+All three route forms invoke the same Echo Lambda, whose path normalization then maps them to the canonical internal routes.
+
+### Resulting Request Path
+
+```mermaid
+sequenceDiagram
+  participant UI as React
+  participant GW as API Gateway
+  participant L as Echo Lambda
+  participant D as DynamoDB
+
+  UI->>GW: POST /api/lessons/{lessonId}/echoes
+  GW->>L: Invoke Echo handler
+  L->>L: Normalize /api prefix
+  L->>D: PutCommand
+  D-->>L: Success
+  L-->>UI: 201 Created
+```
+
+This is the missing infrastructure connection that prevented Echoes from ever reaching DynamoDB.
