@@ -168,3 +168,30 @@ Short-lived signed viewer URL
    ↑
 Application Lambda authorization
 ```
+
+
+## Production incident: OpenSSL decoder error
+
+### Symptom
+
+A deployed playback request returned HTTP 500 with:
+
+```text
+ERR_OSSL_UNSUPPORTED
+error:1E08010C:DECODER routines::unsupported
+```
+
+### Root cause
+
+The original signer assumed the Secrets Manager value was always JSON with a `privateKey` property. Secrets Manager can also store the complete PEM directly, and PEM text may be entered with literal `\\n` sequences instead of real line breaks. Passing an incorrectly extracted key to Node.js/OpenSSL causes the decoder failure.
+
+### Fix
+
+The signer now accepts both:
+
+1. a raw PEM stored directly as the secret value; or
+2. JSON containing a `privateKey` string.
+
+Literal `\\n` sequences are normalized to PEM line breaks before signing, and the value is checked for a private-key PEM header/footer.
+
+Recommended secret value is the complete private key PEM. The private key must never be committed or logged.
