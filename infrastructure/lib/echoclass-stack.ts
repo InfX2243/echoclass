@@ -30,7 +30,8 @@ export class EchoClassStack extends cdk.Stack {
     const webDistPath = path.resolve(import.meta.dirname, '../../apps/web/dist');
     const webOrigin =
       this.node.tryGetContext('webOrigin') ?? process.env.ECHOCLASS_WEB_ORIGIN ?? 'http://localhost:5173';
-    const apiCorsOrigins = this.node.tryGetContext('apiCorsOrigins') ?? process.env.ECHOCLASS_API_CORS_ORIGINS;
+    // API CORS is intentionally restricted to exactly the local Vite app and the deployed web app.
+    const deployedWebOrigin = process.env.ECHOCLASS_DEPLOYED_WEB_ORIGIN ?? 'https://ddf9lplgkbhew.cloudfront.net';
     const mediaPublicKey =
       this.node.tryGetContext('mediaPublicKey') ?? process.env.ECHOCLASS_MEDIA_PUBLIC_KEY;
     const mediaSigningSecretArn =
@@ -217,15 +218,7 @@ export class EchoClassStack extends cdk.Stack {
       ],
     });
 
-    // Keep CORS origins as concrete strings. CloudFormation does not de-duplicate
-    // unresolved CloudFront tokens against explicitly configured origins.
-    const corsOrigins = Array.from(
-      new Set([
-        webOrigin,
-        ...(apiCorsOrigins ? apiCorsOrigins.split(',').map((origin) => origin.trim()).filter(Boolean) : []),
-        'http://localhost:5173',
-      ]),
-    );
+    const corsOrigins = Array.from(new Set(['http://localhost:5173', deployedWebOrigin]));
 
     new s3deploy.BucketDeployment(this, 'WebDeployment', {
       sources: [s3deploy.Source.asset(webDistPath)],
