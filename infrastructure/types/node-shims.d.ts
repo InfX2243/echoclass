@@ -7,11 +7,9 @@ declare interface ImportMeta {
 }
 
 declare module 'node:fs' {
-  const fs: any;
-  export = fs;
+  export function existsSync(path: string): boolean;
 }
 
 declare module 'node:path' {
-  const path: any;
-  export = path;
+  export function resolve(...paths: string[]): string;
 }
