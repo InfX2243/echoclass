@@ -62,12 +62,14 @@ const getSigningSecret = async () => {
   return signingSecretPromise;
 };
 
+// CloudFront uses its own URL-safe Base64 mapping for signed URL values:
+// + -> -, = -> _, / -> ~
 const toCloudFrontBase64 = (value) =>
   Buffer.from(value)
     .toString('base64')
     .replace(/\+/g, '-')
-    .replace(/=/g, '~')
-    .replace(/\//g, '_');
+    .replace(/=/g, '_')
+    .replace(/\//g, '~');
 
 const createCannedPolicySignature = ({ url, expiresAt, privateKey }) => {
   const policy = JSON.stringify({
