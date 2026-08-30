@@ -1,6 +1,6 @@
 # EchoClass — Implementation State
 
-> **Authoritative snapshot:** August 29, 2026 — `feat/cloudfront-web-deployment`.
+> **Authoritative snapshot:** August 30, 2026 — `feat/cloudfront-web-deployment`.
 
 ## Status Legend
 - [x] DONE
@@ -10,7 +10,7 @@
 
 ## Current milestone
 
-**Frontend CloudFront deployment infrastructure is implemented.** The remaining work is the real AWS deployment/verification run using the production environment variables and the resulting CloudFront URL.
+**Frontend CloudFront deployment and private CloudFront media playback are implemented.** The remaining work is the final production deployment/acceptance verification and any later hardening such as a custom domain, CI/CD, WAF, and key-rotation automation.
 
 ## Completed product and backend
 
@@ -33,6 +33,9 @@
 - [x] Student-authorized playback.
 - [x] Playback position preserved when switching browser tabs.
 - [x] Private media CloudFront distribution via OAC.
+- [x] Short-lived CloudFront signed playback URLs.
+- [x] CloudFront signature encoding corrected to the required URL-safe Base64 mapping.
+- [x] Progressive browser playback using HTTP byte-range requests; full-video download is not required before playback.
 
 ### Echo MVP
 - [x] Create Echo.
@@ -55,6 +58,7 @@
 - [x] Dedicated Echo Lambda.
 - [x] Cognito User Pool integration.
 - [x] CloudFront distribution for private media delivery via OAC.
+- [x] CloudFront signed URL viewer authorization for private media.
 - [x] Dedicated private S3 bucket for the React production bundle.
 - [x] Dedicated CloudFront distribution for the React web application.
 - [x] Web bucket protected by CloudFront OAC.
@@ -99,4 +103,7 @@ The application is considered publicly deployed when a user can open one HTTPS C
 - [x] Implementation state reconciled with the working branch.
 - [x] Remaining roadmap updated to prioritize public deployment.
 - [x] CloudFront web deployment architecture and runbook added in `docs/15-cloudfront-web-deployment.md`.
+- [x] Private media delivery documented in `docs/16-private-media-delivery.md`.
+- [x] CloudFront media playback implementation and troubleshooting documented in `docs/22-cloudfront-media-playback-implementation.md`.
+- [x] Progressive video buffering/range-request behavior documented.
 - [x] Production environment template added at `apps/web/.env.production.example`.
