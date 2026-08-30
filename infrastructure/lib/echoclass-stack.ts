@@ -217,13 +217,15 @@ export class EchoClassStack extends cdk.Stack {
       ],
     });
 
-    const deployedWebOrigin = `https://${webDistribution.distributionDomainName}`;
-    const corsOrigins = [
-      webOrigin,
-      deployedWebOrigin,
-      ...(apiCorsOrigins ? apiCorsOrigins.split(',').map((origin) => origin.trim()).filter(Boolean) : []),
-      'http://localhost:5173',
-    ].filter((origin, index, originsList) => originsList.indexOf(origin) === index);
+    // Keep CORS origins as concrete strings. CloudFormation does not de-duplicate
+    // unresolved CloudFront tokens against explicitly configured origins.
+    const corsOrigins = Array.from(
+      new Set([
+        webOrigin,
+        ...(apiCorsOrigins ? apiCorsOrigins.split(',').map((origin) => origin.trim()).filter(Boolean) : []),
+        'http://localhost:5173',
+      ]),
+    );
 
     new s3deploy.BucketDeployment(this, 'WebDeployment', {
       sources: [s3deploy.Source.asset(webDistPath)],
