@@ -216,6 +216,8 @@ export class EchoClassStack extends cdk.Stack {
       ],
     });
 
+    const deployedWebOrigin = `https://${webDistribution.distributionDomainName}`;
+
     new s3deploy.BucketDeployment(this, 'WebDeployment', {
       sources: [s3deploy.Source.asset(webDistPath)],
       destinationBucket: webBucket,
@@ -280,7 +282,7 @@ export class EchoClassStack extends cdk.Stack {
       apiName: `EchoClass-${environmentName}-api`,
       createDefaultStage: true,
       corsPreflight: {
-        allowOrigins: [webOrigin, 'http://localhost:5173'].filter(
+        allowOrigins: [webOrigin, deployedWebOrigin, 'http://localhost:5173'].filter(
           (origin, index, originsList) => originsList.indexOf(origin) === index,
         ),
         allowMethods: [apigatewayv2.CorsHttpMethod.ANY],
