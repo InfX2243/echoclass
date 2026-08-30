@@ -8,28 +8,65 @@ const keyPairId = () => process.env.MEDIA_SIGNING_KEY_PAIR_ID;
 
 let signingSecretPromise;
 
-const normalizePrivateKey = (value) => {\n  if (typeof value !== 'string') return null;\n  const normalized = value.trim().replace(/\\\\n/g, '\\n');\n  return normalized.includes('-----BEGIN') && normalized.includes('PRIVATE KEY-----') ? normalized : null;\n};\n\nconst extractPrivateKey = (secretString) => {\n  const rawPrivateKey = normalizePrivateKey(secretString);\n  if (rawPrivateKey) return rawPrivateKey;\n  try {\n    const parsed = JSON.parse(secretString);\n    const privateKey = normalizePrivateKey(parsed?.privateKey);\n    if (privateKey) return privateKey;\n  } catch {\n    // Raw PEM is also a supported Secrets Manager representation.\n  }\n  throw new Error('MEDIA_SIGNING_SECRET_INVALID');\n};\n\nconst getSigningSecret = async () => {
+const normalizePrivateKey = (value) => {
+  if (typeof value !== 'string') return null;
+
+  const normalized = value.trim().replace(/\\n/g, '\n');
+  const match = normalized.match(
+    /-----BEGIN ([A-Z ]*PRIVATE KEY)-----([\\s\\S]*?)-----END \\1-----/
+  );
+
+  if (!match) return null;
+
+  const [, label, body] = match;
+  const compactBody = body.replace(/\\s+/g, '');
+
+  if (!compactBody) return null;
+
+  const lines = compactBody.match(/.{1,64}/g) ?? [];
+
+  return [
+    `-----BEGIN ${label}-----`,
+    ...lines,
+    `-----END ${label}-----`,
+    '',
+  ].join('\n');
+};
+
+const extractPrivateKey = (secretString) => {
+  const rawPrivateKey = normalizePrivateKey(secretString);
+  if (rawPrivateKey) return rawPrivateKey;
+
+  try {
+    const parsed = JSON.parse(secretString);
+    const privateKey = normalizePrivateKey(parsed?.privateKey);
+    if (privateKey) return privateKey;
+  } catch {
+    // Raw PEM is also supported.
+  }
+
+  throw new Error('MEDIA_SIGNING_SECRET_INVALID');
+};
+
+const getSigningSecret = async () => {
   if (!signingSecretPromise) {
     signingSecretPromise = secretsManager
       .send(new GetSecretValueCommand({ SecretId: secretArn() }))
       .then((response) => {
         if (!response.SecretString) throw new Error('MEDIA_SIGNING_SECRET_EMPTY');
-        const secret = JSON.parse(response.SecretString);
-        if (typeof secret.privateKey !== 'string' || secret.privateKey.length === 0) {
-          throw new Error('MEDIA_SIGNING_SECRET_INVALID');
-        }
-        return secret;
+        return extractPrivateKey(response.SecretString);
       });
   }
+
   return signingSecretPromise;
 };
 
 const toCloudFrontBase64 = (value) =>
   Buffer.from(value)
     .toString('base64')
-    .replace(/\+/g, '-')
+    .replace(/\\+/g, '-')
     .replace(/=/g, '~')
-    .replace(/\//g, '_');
+    .replace(/\\//g, '_');
 
 const createCannedPolicySignature = ({ url, expiresAt, privateKey }) => {
   const policy = JSON.stringify({
@@ -40,22 +77,31 @@ const createCannedPolicySignature = ({ url, expiresAt, privateKey }) => {
       },
     ],
   });
+
   const signer = createSign('RSA-SHA1');
   signer.update(policy);
   signer.end();
+
   return toCloudFrontBase64(signer.sign(privateKey));
 };
 
 export const createLessonPlaybackAccess = async ({ objectKey, expiresIn = 3600 }) => {
   const privateKey = await getSigningSecret();
   const expiresAtEpoch = Math.floor(Date.now() / 1000) + expiresIn;
-  const url = `https://${distributionDomain()}/${objectKey.split('/').map(encodeURIComponent).join('/')}`;
+  const url = `https://${distributionDomain()}/${objectKey
+    .split('/')
+    .map(encodeURIComponent)
+    .join('/')}`;
+
   const signature = createCannedPolicySignature({
     url,
     expiresAt: expiresAtEpoch,
     privateKey,
   });
-  const playbackUrl = `${url}?Expires=${expiresAtEpoch}&Key-Pair-Id=${encodeURIComponent(keyPairId())}&Signature=${signature}`;
+
+  const playbackUrl = `${url}?Expires=${expiresAtEpoch}&Key-Pair-Id=${encodeURIComponent(
+    keyPairId()
+  )}&Signature=${signature}`;
 
   return {
     playbackUrl,
