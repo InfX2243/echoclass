@@ -1,8 +1,9 @@
+const DEPLOYMENT_REVISION = 'cloudfront-web-deployment-cors-v2';
 const COGNITO_ISSUER = `https://cognito-idp.${process.env.COGNITO_REGION}.amazonaws.com/${process.env.COGNITO_USER_POOL_ID}`;
 const JWKS_URL = new URL(`${COGNITO_ISSUER}/.well-known/jwks.json`);
 let jwksCache;
 let jwksCacheExpiresAt = 0;
-const log = (message, details = {}) => console.log(JSON.stringify({ scope: 'auth', message, ...details }));
+const log = (message, details = {}) => console.log(JSON.stringify({ scope: 'auth', message, ...details, deploymentRevision: DEPLOYMENT_REVISION }));
 const unauthorized = (message) => { const error = new Error(message); error.statusCode = 401; error.code = 'UNAUTHORIZED'; return error; };
 const decodeBase64Url = (value) => Buffer.from(value.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
 const parseJwt = (token) => { const parts = token.split('.'); if (parts.length !== 3) throw unauthorized('Invalid bearer token'); try { return { header: JSON.parse(decodeBase64Url(parts[0]).toString('utf8')), payload: JSON.parse(decodeBase64Url(parts[1]).toString('utf8')), signature: decodeBase64Url(parts[2]), signingInput: Buffer.from(`${parts[0]}.${parts[1]}`) }; } catch { throw unauthorized('Invalid bearer token'); } };
