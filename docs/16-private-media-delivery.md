@@ -54,15 +54,9 @@ The distribution now requires a trusted CloudFront key group for its default cac
 
 The matching private key is stored outside source control in AWS Secrets Manager. The secret is read only by the application Lambda through its IAM execution role.
 
-The secret value must be JSON:
+The signer accepts the private key as either raw PEM text or JSON containing a `privateKey` field. Literal `\\n` sequences and whitespace-collapsed PEM values are normalized before signing. The generated signature uses CloudFront's required URL-safe Base64 mapping (`+` → `-`, `=` → `_`, `/` → `~`). This normalization is important because an incorrectly encoded signature is rejected by CloudFront with HTTP 403.
 
-```json
-{
-  "privateKey": "-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----"
-}
-```
-
-The API uses the CloudFront canned signed-URL policy with a default lifetime of **1 hour** so normal lesson sessions and range requests can continue without requiring a mid-lesson authorization refresh.
+The API uses a short-lived canned signed-URL policy. The URL lifetime is configured by the Lambda signer and must be long enough for normal playback and range requests while remaining an authorization capability rather than a permanent media credential.
 
 The browser therefore receives a URL shaped like:
 
@@ -74,6 +68,40 @@ https://<media-distribution>.cloudfront.net/lessons/<lessonId>/video.mp4
 ```
 
 The signed URL is an authorization capability, not an S3 credential. It does not expose the S3 bucket or object through a public S3 endpoint.
+
+## Progressive video playback and range requests
+
+The browser does **not** wait for the complete MP4 to download before playback starts. The HTML5 video element progressively buffers media and requests additional bytes while playback continues.
+
+```mermaid
+flowchart LR
+  Browser[HTML5 Video Element]
+  Buffer[Browser Media Buffer]
+  CF[CloudFront]
+  Cache[CloudFront Cache]
+  S3[(Private Media S3)]
+
+  Browser -->|Initial byte-range request| CF
+  CF --> Cache
+  Cache -->|Cache miss| S3
+  S3 --> CF
+  CF --> Buffer
+  Buffer -->|Enough data buffered| Play[Playback starts]
+  Play --> Browser
+  Browser -->|Additional ranges / seeking| CF
+```
+
+Typical behavior is:
+
+1. the browser requests an initial byte range;
+2. CloudFront serves the requested bytes from cache or retrieves them from S3;
+3. the browser buffers enough media data to begin decoding and playback;
+4. additional byte ranges are fetched in the background as needed;
+5. seeking can trigger requests for different portions of the object.
+
+The exact buffer size and request pattern are controlled by the browser and media stack. EchoClass does not explicitly download the entire video before assigning it to the player.
+
+This makes large lesson videos practical while also allowing CloudFront to cache reusable media content close to students.
 
 ## Caching behavior
 
