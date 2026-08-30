@@ -9,5 +9,5 @@
     "skipLibCheck": true,
     "outDir": "cdk.out"
   },
-  "include": ["bin", "lib"]
+  "include": ["bin", "lib", "types"]
 }
