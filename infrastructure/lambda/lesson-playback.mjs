@@ -12,14 +12,12 @@ const normalizePrivateKey = (value) => {
   if (typeof value !== 'string') return null;
 
   const normalized = value.trim().replace(/\\n/g, '\n');
-  const match = normalized.match(
-    /-----BEGIN ([A-Z ]*PRIVATE KEY)-----([\\s\\S]*?)-----END \\1-----/
-  );
+  const match = normalized.match(\n    /-----BEGIN ([A-Z ]*PRIVATE KEY)-----([\\s\\S]*?)-----END \\1-----/\n  );
 
   if (!match) return null;
 
   const [, label, body] = match;
-  const compactBody = body.replace(/\\s+/g, '');
+  const compactBody = body.replace(/\s+/g, '');
 
   if (!compactBody) return null;
 
@@ -64,9 +62,9 @@ const getSigningSecret = async () => {
 const toCloudFrontBase64 = (value) =>
   Buffer.from(value)
     .toString('base64')
-    .replace(/\\+/g, '-')
+    .replace(/\+/g, '-')
     .replace(/=/g, '~')
-    .replace(/\\//g, '_');
+    .replace(/\//g, '_');
 
 const createCannedPolicySignature = ({ url, expiresAt, privateKey }) => {
   const policy = JSON.stringify({
