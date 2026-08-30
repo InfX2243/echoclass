@@ -12,9 +12,26 @@ const normalizePrivateKey = (value) => {
   if (typeof value !== 'string') return null;
 
   const normalized = value.trim().replace(/\\n/g, '\n');
-  const match = normalized.match(\n    /-----BEGIN ([A-Z ]*PRIVATE KEY)-----([\\s\\S]*?)-----END \\1-----/\n  );
+  const beginMatch = normalized.match(/-----BEGIN ([A-Z ]*PRIVATE KEY)-----/);
+  const endMatch = normalized.match(/-----END ([A-Z ]*PRIVATE KEY)-----/);
 
-  if (!match) return null;
+  if (!beginMatch || !endMatch || beginMatch[1] !== endMatch[1]) return null;
+
+  const label = beginMatch[1];
+  const body = normalized
+    .slice(beginMatch.index + beginMatch[0].length, endMatch.index)
+    .replace(/\s+/g, '');
+
+  if (!body) return null;
+
+  const lines = body.match(/.{1,64}/g) ?? [];
+
+  return [
+    `-----BEGIN ${label}-----`,
+    ...lines,
+    `-----END ${label}-----`,
+    '',
+  ].join('\n');
 
   const [, label, body] = match;
   const compactBody = body.replace(/\s+/g, '');
