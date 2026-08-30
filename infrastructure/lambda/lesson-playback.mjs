@@ -8,7 +8,7 @@ const keyPairId = () => process.env.MEDIA_SIGNING_KEY_PAIR_ID;
 
 let signingSecretPromise;
 
-const getSigningSecret = async () => {
+const normalizePrivateKey = (value) => {\n  if (typeof value !== 'string') return null;\n  const normalized = value.trim().replace(/\\\\n/g, '\\n');\n  return normalized.includes('-----BEGIN') && normalized.includes('PRIVATE KEY-----') ? normalized : null;\n};\n\nconst extractPrivateKey = (secretString) => {\n  const rawPrivateKey = normalizePrivateKey(secretString);\n  if (rawPrivateKey) return rawPrivateKey;\n  try {\n    const parsed = JSON.parse(secretString);\n    const privateKey = normalizePrivateKey(parsed?.privateKey);\n    if (privateKey) return privateKey;\n  } catch {\n    // Raw PEM is also a supported Secrets Manager representation.\n  }\n  throw new Error('MEDIA_SIGNING_SECRET_INVALID');\n};\n\nconst getSigningSecret = async () => {
   if (!signingSecretPromise) {
     signingSecretPromise = secretsManager
       .send(new GetSecretValueCommand({ SecretId: secretArn() }))
@@ -47,13 +47,13 @@ const createCannedPolicySignature = ({ url, expiresAt, privateKey }) => {
 };
 
 export const createLessonPlaybackAccess = async ({ objectKey, expiresIn = 3600 }) => {
-  const secret = await getSigningSecret();
+  const privateKey = await getSigningSecret();
   const expiresAtEpoch = Math.floor(Date.now() / 1000) + expiresIn;
   const url = `https://${distributionDomain()}/${objectKey.split('/').map(encodeURIComponent).join('/')}`;
   const signature = createCannedPolicySignature({
     url,
     expiresAt: expiresAtEpoch,
-    privateKey: secret.privateKey,
+    privateKey,
   });
   const playbackUrl = `${url}?Expires=${expiresAtEpoch}&Key-Pair-Id=${encodeURIComponent(keyPairId())}&Signature=${signature}`;
 
