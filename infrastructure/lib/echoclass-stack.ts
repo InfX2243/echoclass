@@ -30,6 +30,7 @@ export class EchoClassStack extends cdk.Stack {
     const webDistPath = path.resolve(import.meta.dirname, '../../apps/web/dist');
     const webOrigin =
       this.node.tryGetContext('webOrigin') ?? process.env.ECHOCLASS_WEB_ORIGIN ?? 'http://localhost:5173';
+    const apiCorsOrigins = this.node.tryGetContext('apiCorsOrigins') ?? process.env.ECHOCLASS_API_CORS_ORIGINS;
     const mediaPublicKey =
       this.node.tryGetContext('mediaPublicKey') ?? process.env.ECHOCLASS_MEDIA_PUBLIC_KEY;
     const mediaSigningSecretArn =
@@ -217,6 +218,12 @@ export class EchoClassStack extends cdk.Stack {
     });
 
     const deployedWebOrigin = `https://${webDistribution.distributionDomainName}`;
+    const corsOrigins = [
+      webOrigin,
+      deployedWebOrigin,
+      ...(apiCorsOrigins ? apiCorsOrigins.split(',').map((origin) => origin.trim()).filter(Boolean) : []),
+      'http://localhost:5173',
+    ].filter((origin, index, originsList) => originsList.indexOf(origin) === index);
 
     new s3deploy.BucketDeployment(this, 'WebDeployment', {
       sources: [s3deploy.Source.asset(webDistPath)],
@@ -282,9 +289,7 @@ export class EchoClassStack extends cdk.Stack {
       apiName: `EchoClass-${environmentName}-api`,
       createDefaultStage: true,
       corsPreflight: {
-        allowOrigins: [webOrigin, deployedWebOrigin, 'http://localhost:5173'].filter(
-          (origin, index, originsList) => originsList.indexOf(origin) === index,
-        ),
+        allowOrigins: corsOrigins,
         allowMethods: [apigatewayv2.CorsHttpMethod.ANY],
         allowHeaders: ['content-type', 'authorization'],
         allowCredentials: false,
