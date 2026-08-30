@@ -75,7 +75,7 @@ export class EchoClassStack extends cdk.Stack {
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
       cors: [
         {
-          allowedOrigins: ['http://localhost:5173'],
+          allowedOrigins: ['http://localhost:5173', deployedWebOrigin],
           allowedMethods: [s3.HttpMethods.PUT, s3.HttpMethods.POST],
           allowedHeaders: ['*'],
           exposedHeaders: ['ETag'],
