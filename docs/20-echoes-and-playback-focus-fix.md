@@ -24,7 +24,7 @@ The deployed API route exists, but the Echo Lambda handler only supports creatio
 POST /api/lessons/{lessonId}/echoes
 ```
 
-The Lambda needs the lesson ID from the path in order to authorize student access and validate the timestamp against the lesson duration. As a result, the frontend request reached a route that could not be processed as a valid Echo creation request.
+The Lambda needs the lesson ID from the path in order to authorize student access and validate the timestamp against the lesson duration.
 
 ### 2. Echo loading errors were caused by the same route/contract area being inconsistent
 
@@ -34,11 +34,11 @@ The lesson-specific Echo read route is:
 GET /api/lessons/{lessonId}/echoes
 ```
 
-The client already targeted that route, while creation targeted a different contract. The implementation is now normalized so all lesson-bound Echo mutations and reads consistently use the lesson-scoped API contract.
+The implementation was normalized so all lesson-bound Echo reads and mutations consistently use the lesson-scoped API contract.
 
 ### 3. Video reset was caused by focus-driven data refetching
 
-The authorized lesson query contains the playback authorization, including the video URL. TanStack Query refetches stale queries when the browser window regains focus by default.
+The authorized lesson query contains the playback authorization, including the video URL. TanStack Query refetched stale queries when the browser window regained focus.
 
 When the lesson query refetched after returning to the tab, a new playback URL could be produced. React then received a changed `src` for the HTML5 video element, causing the media element to reload and restart from the beginning.
 
@@ -52,25 +52,9 @@ Echo creation now sends:
 POST /api/lessons/{lessonId}/echoes
 ```
 
-The request body contains only the Echo payload:
-
-```json
-{
-  "timestampSeconds": 123.45,
-  "type": "QUESTION",
-  "note": "Optional note"
-}
-```
-
 ### Query focus behavior
 
-The following queries now explicitly disable refetching on browser window focus:
-
-- authorized lesson query
-- current student's Echo list
-- lesson-specific Echo list
-
-This preserves the current HTML5 video element and its playback position while the user switches away from and back to the browser tab.
+The authorized lesson query and relevant Echo queries disable browser-window-focus refetching. This preserves the current HTML5 video element and playback position while the user switches tabs.
 
 ## Expected Behavior After the Fix
 
@@ -79,15 +63,15 @@ sequenceDiagram
   participant S as Student
   participant UI as React UI
   participant API as HTTP API
-  participant E as Echo Lambda
-  participant DB as DynamoDB
+  participant E as Echo API Lambda
+  participant D as DynamoDB
 
   S->>UI: Save Echo at current timestamp
   UI->>API: POST /lessons/{lessonId}/echoes
   API->>E: Invoke Echo handler
   E->>E: Verify token and lesson access
-  E->>DB: Persist Echo
-  DB-->>E: Echo
+  E->>D: Persist Echo
+  D-->>E: Echo
   E-->>UI: 201 { echo }
   UI->>UI: Invalidate Echo queries
   UI-->>S: Echo appears in list
@@ -121,42 +105,24 @@ sequenceDiagram
 - [ ] Confirm playback position is preserved and the video does not restart at zero.
 - [ ] Confirm existing lesson/class functionality remains unchanged.
 
-## Follow-up
+## Follow-up: API Gateway routing failure
 
-The current playback implementation uses short-lived S3 presigned URLs. The infrastructure already contains a private CloudFront distribution, and a future media-delivery slice should complete the migration to CloudFront-based playback. That work is separate from this focus-reset fix.
+The frontend route correction alone was not sufficient because API Gateway route matching happened before the Echo Lambda could execute.
 
-
-## Second Investigation — Actual Production Failure
-
-The previous frontend route correction was not sufficient because the actual failure was at **API Gateway route matching**, before the Echo Lambda could execute.
-
-The React client calls Echo endpoints with the same prefix used by the rest of the application:
-
-```text
-/api/echoes
-/api/lessons/{lessonId}/echoes
-```
-
-However, the CDK stack had registered the Echo Lambda only on unprefixed API Gateway routes:
+The CDK stack initially registered the Echo Lambda only on unprefixed routes:
 
 ```text
 /echoes
 /lessons/{lessonId}/echoes
 ```
 
-Because API Gateway route matching happens before Lambda invocation, requests such as `POST /api/lessons/{lessonId}/echoes` did not reach `echo-handler.mjs` at all. Therefore `createEcho()` never executed and no DynamoDB item could be created. This also explains why the DynamoDB table remained empty.
+while the frontend used `/api/...`. The stack was corrected to register the Echo routes for the supported prefixes:
 
-### Infrastructure Fix
-
-The stack now registers Echo routes for the prefixes supported by the application handler and frontend contract:
-
+- `/...`
 - `/api/...`
 - `/api/v1/...`
-- legacy unprefixed routes
 
-All three route forms invoke the same Echo Lambda, whose path normalization then maps them to the canonical internal routes.
-
-### Resulting Request Path
+All forms invoke the same Echo Lambda, whose path normalization maps them to the canonical internal routes.
 
 ```mermaid
 sequenceDiagram
@@ -173,70 +139,67 @@ sequenceDiagram
   L-->>UI: 201 Created
 ```
 
-This is the missing infrastructure connection that prevented Echoes from ever reaching DynamoDB.
+## Follow-up: POST returned 400
 
+After API Gateway routing was corrected, timestamp validation still returned `400` when lesson media duration metadata was unavailable.
 
-## Third Investigation — POST Returned 400
+The fix now requires timestamps to be finite and non-negative, while enforcing the upper bound only when a valid positive lesson duration is available.
 
-After API Gateway routing was corrected, the POST request reached the Echo Lambda but still returned **400**. The validation code derived the lesson duration from `Number(lesson.media?.durationSeconds ?? 0)` and unconditionally required `timestampSeconds <= durationSeconds`.
+## CloudWatch diagnostic instrumentation
 
-Current lesson media records do not reliably persist `durationSeconds`. Missing metadata therefore became `0`, which made every Echo created after the first instant of playback invalid.
-
-### Fix
-
-Timestamp validation now distinguishes between a known positive duration and unavailable duration metadata:
-
-- timestamp must always be finite and non-negative;
-- the upper-bound check is enforced only when a valid positive lesson duration is available.
-
-This preserves protection against invalid timestamps while allowing the actual HTML5 video playback timestamp to be persisted for lessons whose media duration metadata has not yet been populated.
-
-### Final POST Flow
-
-`POST /api/lessons/{lessonId}/echoes` → API Gateway → Echo Lambda → token/access validation → timestamp validation → DynamoDB `PutCommand` → **201 Created**.
-
-
-## CloudWatch Diagnostic Instrumentation for Remaining 500
-
-The Echo POST handler now emits a request ID and stage-by-stage structured JSON logs for:
+The Echo POST handler emits structured request/stage logs for:
 
 1. request arrival and route;
 2. token verification;
 3. user resolution and role;
 4. lesson authorization;
 5. Echo payload validation;
-6. DynamoDB `PutCommand` start, including table name and generated keys;
+6. DynamoDB `PutCommand` start;
 7. DynamoDB success metadata;
-8. the exact AWS SDK error name, message, code, stack, and request metadata on failure.
+8. AWS SDK errors on failure.
 
-The DynamoDB write is also wrapped independently, so CloudWatch will clearly distinguish an authorization/lesson failure from a `PutCommand` failure.
+The DynamoDB write is wrapped independently so CloudWatch can distinguish authorization/lesson failures from `PutCommand` failures.
 
-### What to send after deployment
+## Confirmed CloudWatch root cause — `updatedAt` ReferenceError
 
-Open the Lambda log group:
-
-`/aws/lambda/EchoClass-dev-echo-api`
-
-Filter around the failing request and send the JSON entry with `event: "dynamodb-put-failed"` or `event: "request-failed"`. That entry will contain the exact AWS error instead of only the browser's HTTP 500.
-
-
-## Confirmed CloudWatch Root Cause — `updatedAt` ReferenceError
-
-CloudWatch confirmed the remaining POST failure was a JavaScript runtime bug in `createEcho`:
+The remaining POST failure was a JavaScript runtime bug in `createEcho`:
 
 ```text
 ReferenceError: updatedAt is not defined
 ```
 
-The repository created `createdAt` but included `updatedAt` in the DynamoDB item before declaring it. The Lambda therefore crashed while constructing the item, before the `PutCommand` started.
+The repository created `createdAt` but referenced `updatedAt` before declaring it.
 
-### Fix
-
-Echo creation now initializes both timestamps consistently:
+The fix initializes both consistently:
 
 ```text
 const createdAt = now();
 const updatedAt = createdAt;
 ```
 
-The same creation timestamp is used as the initial update timestamp. The DynamoDB write can now proceed to `PutCommand`.
+## Media delivery follow-up
+
+The original playback focus fix intentionally left the application on short-lived S3 presigned URLs while the private CloudFront distribution existed only as infrastructure.
+
+That follow-up is now complete on `feat/cloudfront-web-deployment`:
+
+```mermaid
+flowchart LR
+  Student[Student]
+  API[Playback API]
+  Auth[Lesson + membership authorization]
+  Sign[CloudFront URL signing]
+  CF[Media CloudFront]
+  S3[Private Media S3]
+
+  Student --> API
+  API --> Auth
+  Auth --> Sign
+  Sign --> Student
+  Student --> CF
+  CF -->|OAC / SigV4| S3
+```
+
+The playback endpoint now returns a short-lived signed CloudFront URL rather than an S3 presigned URL. CloudFront validates the viewer signature and can serve the private video from its edge cache while S3 remains inaccessible to anonymous users.
+
+The signing private key is stored in AWS Secrets Manager and is never sent to the browser. See `docs/16-private-media-delivery.md` and `docs/22-cloudfront-media-playback-implementation.md` for the current implementation details.

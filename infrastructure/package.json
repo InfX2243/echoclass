@@ -1,6 +1,10 @@
 {
   "name": "@echoclass/infrastructure", "version": "1.0.0", "private": true, "type": "module",
-  "scripts": { "build": "tsc --noEmit", "synth": "cdk synth" },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "synth": "cdk synth",
+    "validate:lambda": "node --check lambda/api-handler.mjs && node --check lambda/auth.mjs && node --check lambda/class-repository.mjs && node --check lambda/echo-handler.mjs && node --check lambda/echo-repository.mjs && node --check lambda/lesson-playback.mjs && node --check lambda/lesson-repository.mjs && node --check lambda/media-upload.mjs && node --check lambda/membership-repository.mjs && node --check lambda/user-repository.mjs"
+  },
   "dependencies": { "@aws-sdk/client-s3": "^3.998.0", "@aws-sdk/s3-request-presigner": "^3.998.0", "aws-cdk-lib": "^2.245.0", "constructs": "^10.4.2" },
   "devDependencies": { "aws-cdk": "^2.1100.0", "tsx": "^4.20.6", "typescript": "^6.0.3" }
 }

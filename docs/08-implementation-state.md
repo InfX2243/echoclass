@@ -1,6 +1,6 @@
 # EchoClass — Implementation State
 
-> **Authoritative snapshot:** August 29, 2026 — `feat/echo-mvp`.
+> **Authoritative snapshot:** August 30, 2026 — `feat/cloudfront-web-deployment`.
 
 ## Status Legend
 - [x] DONE
@@ -10,9 +10,7 @@
 
 ## Current milestone
 
-**Echo MVP is complete and verified.**
-
-The next implementation milestone is **production-style frontend deployment through CloudFront**, so the application has a stable public URL suitable for submission.
+**Frontend CloudFront deployment and private CloudFront media playback are implemented.** The remaining work is the final production deployment/acceptance verification and any later hardening such as a custom domain, CI/CD, WAF, and key-rotation automation.
 
 ## Completed product and backend
 
@@ -34,6 +32,10 @@ The next implementation milestone is **production-style frontend deployment thro
 - [x] Direct multipart browser-to-S3 upload.
 - [x] Student-authorized playback.
 - [x] Playback position preserved when switching browser tabs.
+- [x] Private media CloudFront distribution via OAC.
+- [x] Short-lived CloudFront signed playback URLs.
+- [x] CloudFront signature encoding corrected to the required URL-safe Base64 mapping.
+- [x] Progressive browser playback using HTTP byte-range requests; full-video download is not required before playback.
 
 ### Echo MVP
 - [x] Create Echo.
@@ -56,29 +58,42 @@ The next implementation milestone is **production-style frontend deployment thro
 - [x] Dedicated Echo Lambda.
 - [x] Cognito User Pool integration.
 - [x] CloudFront distribution for private media delivery via OAC.
+- [x] CloudFront signed URL viewer authorization for private media.
+- [x] Dedicated private S3 bucket for the React production bundle.
+- [x] Dedicated CloudFront distribution for the React web application.
+- [x] Web bucket protected by CloudFront OAC.
+- [x] HTTPS redirect and SPA 403/404 fallback to `index.html`.
+- [x] CDK deployment of `apps/web/dist` with CloudFront invalidation.
+- [x] API CORS accepts a configurable deployed web origin while retaining localhost support.
 
-## Next milestone — Public web application deployment
+## Phase 17 — Frontend CloudFront Hosting
 
-### Phase 17 — Frontend CloudFront Hosting
-- [ ] Build production Vite bundle.
-- [ ] Provision a private S3 origin for static web assets.
-- [ ] Provision CloudFront distribution for the React application.
-- [ ] Configure SPA routing fallback to `index.html`.
-- [ ] Configure production environment variables/API base URL.
-- [ ] Configure CloudFront cache behavior and HTTPS.
-- [ ] Deploy the web bundle.
+### Infrastructure implementation
+- [x] Provision a private S3 origin for static web assets.
+- [x] Provision CloudFront distribution for the React application.
+- [x] Configure SPA routing fallback to `index.html`.
+- [x] Configure production environment variable template/API base URL.
+- [x] Configure CloudFront cache behavior and HTTPS.
+- [x] Add CDK asset deployment from `apps/web/dist`.
+- [x] Add stack outputs for web bucket, distribution, and public domain.
+
+### Deployment verification
+- [ ] Build production Vite bundle with real API/Cognito configuration.
+- [ ] Deploy the CDK stack to AWS.
+- [ ] Set API CORS to the resulting CloudFront origin.
 - [ ] Verify Cognito authentication from the deployed origin.
 - [ ] Verify API Gateway, video playback, and Echo CRUD from the deployed URL.
+- [ ] Verify direct S3 access remains denied.
 - [ ] Produce the final submission URL.
 
-## Definition of done for the next milestone
+## Definition of done for the current milestone
 
-The application is considered deployed when a user can open one HTTPS CloudFront URL and successfully:
+The application is considered publicly deployed when a user can open one HTTPS CloudFront URL and successfully:
 
 1. sign in;
 2. create or access a class;
 3. access a lesson;
-4. play authorized media;
+4. play authorized media through the existing media CloudFront distribution;
 5. create and persist an Echo;
 6. reload and retrieve that Echo.
 
@@ -87,4 +102,8 @@ The application is considered deployed when a user can open one HTTPS CloudFront
 - [x] Current Echo MVP investigation and fixes documented.
 - [x] Implementation state reconciled with the working branch.
 - [x] Remaining roadmap updated to prioritize public deployment.
-- [x] Deployment architecture documented as the next implementation slice.
+- [x] CloudFront web deployment architecture and runbook added in `docs/15-cloudfront-web-deployment.md`.
+- [x] Private media delivery documented in `docs/16-private-media-delivery.md`.
+- [x] CloudFront media playback implementation and troubleshooting documented in `docs/22-cloudfront-media-playback-implementation.md`.
+- [x] Progressive video buffering/range-request behavior documented.
+- [x] Production environment template added at `apps/web/.env.production.example`.
