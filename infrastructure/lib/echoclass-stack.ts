@@ -368,7 +368,7 @@ export class EchoClassStack extends cdk.Stack {
       exportName: `${environmentName}-EchoClass-WebDomain`,
     });
     new cdk.CfnOutput(this, 'ApiUrl', {
-      value: httpApi.url ?? '',
+      value: httpApi.url!,
       description: 'EchoClass HTTP API URL',
       exportName: `${environmentName}-EchoClass-ApiUrl`,
     });
