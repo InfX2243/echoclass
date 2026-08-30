@@ -195,3 +195,17 @@ The signer now accepts both:
 Literal `\\n` sequences are normalized to PEM line breaks before signing, and the value is checked for a private-key PEM header/footer.
 
 Recommended secret value is the complete private key PEM. The private key must never be committed or logged.
+
+
+### Whitespace-collapsed PEM values
+
+The AWS console may display or store PEM content in a representation where line breaks appear as spaces. A PEM body is Base64 and whitespace inside that body can be normalized safely, but the header/footer must be reconstructed correctly before OpenSSL receives the key.
+
+The signer therefore:
+
+1. converts literal \`\\n\` sequences to real line breaks;
+2. extracts the \`BEGIN ... PRIVATE KEY\` and matching \`END ... PRIVATE KEY\` markers;
+3. removes all whitespace from the Base64 body;
+4. rebuilds the PEM with standard 64-character lines.
+
+This makes the runtime tolerant of raw PEM, JSON-wrapped PEM, literal newline escapes, and whitespace-collapsed PEM values. The preferred operational format is still the complete private-key PEM stored without manual modification.
