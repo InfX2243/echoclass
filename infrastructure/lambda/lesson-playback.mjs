@@ -32,20 +32,6 @@ const normalizePrivateKey = (value) => {
     `-----END ${label}-----`,
     '',
   ].join('\n');
-
-  const [, label, body] = match;
-  const compactBody = body.replace(/\s+/g, '');
-
-  if (!compactBody) return null;
-
-  const lines = compactBody.match(/.{1,64}/g) ?? [];
-
-  return [
-    `-----BEGIN ${label}-----`,
-    ...lines,
-    `-----END ${label}-----`,
-    '',
-  ].join('\n');
 };
 
 const extractPrivateKey = (secretString) => {
